@@ -1,0 +1,12 @@
+kind: MasterConfiguration
+apiVersion: kubeadm.k8s.io/v1alpha1
+api:
+  advertiseAddress: {{ listen_ip }}
+kubernetesVersion: {{ k8s_version }}
+cloudProvider: aws
+tokenTTL: 0s
+kubeProxy:
+  config:
+    clusterCIDR: {{ kube_pod_subnet }}
+networking:
+  podSubnet: {{ kube_pod_subnet }}

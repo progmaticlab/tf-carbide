@@ -1,0 +1,17 @@
+<html>
+<head>
+  <title>Carbide Evaluation System</title>
+  <link rel="shortcut icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" type="text/css" href="../style.css">
+</head>
+<body>
+  <h2> Debug Page</h2>
+  <hr>
+<form action="/delete_stack.php" method="get"
+      onSubmit="if(!confirm('Do you really want to delete the sandbox and all its resources?\\nYou will be redirected to the Amazon EC2 Dashboard.')){return false;}">
+  <input type="submit" value="Delete Sandbox">
+</form>
+  <br>
+  <a href="/debug/logs/">Logs</a>
+</body>
+</html>

@@ -6,10 +6,10 @@ cd /home/centos
 
 if [[ $BUILD == "stable" ]]
   then
-    REGESTRY="carbidesandbox"
+    REGISTRY="carbidesandbox"
     REPOHASH="4bf2fee7bc521e0a59ea5e25f339d185e8ce3977"
   else
-    REGESTRY="opencontrailnightly"
+    REGISTRY="opencontrailnightly"
 fi
 AWS_KEYS=${AWS_STACK_NAME}-stack-keys
 AWS_AMI_IMAGE=$(curl -s http://169.254.169.254/latest/meta-data/ami-id)
@@ -28,7 +28,7 @@ git clone https://github.com/Juniper/contrail-ansible-deployer
 cd contrail-ansible-deployer
 if [[ $BUILD == "stable" ]]
   then
-    git reset --hard $REPOHASH
+    git checkout $REPOHASH
 fi
 
 set +x

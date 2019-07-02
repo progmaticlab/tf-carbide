@@ -40,7 +40,7 @@ instances:
       vrouter:
       k8s_node:
 global_configuration:
-  CONTAINER_REGISTRY: $REGESTRY
+  CONTAINER_REGISTRY: $REGISTRY
 contrail_configuration:
   CONTRAIL_VERSION: latest
   CLOUD_ORCHESTRATOR: kubernetes

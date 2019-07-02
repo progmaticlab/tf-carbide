@@ -30,6 +30,10 @@ for i in "${NODES[@]}"
   aws ec2 terminate-instances --instance-ids $i
 done
 
+aws create-group --name ${AWS_STACK_NAME}-rg \
+--resource-query --tags {"aws:cloudformation:stack-name" : ${AWS_STACK_NAME}}
+aws resource-groups delete-group --group-name
+
 #DELETE Keys pair
 KPCOUNT=$(aws ec2 describe-key-pairs --output text | grep ${AWS_STACK_NAME}-stack-keys  | wc -l)
 if [ $KPCOUNT -gt 0 ]

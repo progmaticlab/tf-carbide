@@ -172,7 +172,7 @@ ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t $K8S_MASTER <
  tar -xvf helm-v2.9.0-linux-amd64.tar.gz
  sudo mv linux-amd64/helm /usr/bin/
  sudo kubectl create -f rbac-config.yaml
-# sudo kubectl create -f aws_esb_storage_class.yaml
+ sudo kubectl create -f aws_esb_storage_class.yaml
  sudo helm init --service-account tiller
  sleep 45
  sudo kubectl get pods --all-namespaces

@@ -40,7 +40,7 @@ $completed_state_html = <<<COMPLETED_STATE
 <p>To use Tungsten Fabric or Kubernetes command line utilities сonnect to the controller using the key specified during the deployment of CloudFormation stack and <b>centos</b> user name.</p>
 <p style="padding-left: 30px;">Example:</p>
 <p style="padding-left: 40px;"><code>ssh -i $keyname.pem centos@$sandbox_uri</code></br>
-<code>sudo kubectl get pods --all-namespaces -o wide</code></br>
+<code>sudo kubectl get pods --all-namespaces</code></br>
 Note: Connection string there may be differences for your operating system or ssh client.</br>
 Use the <i>sudo</i> command to perform tasks with administrator privileges.</p>
 <p>You can use UI for Helm chart installation <a href="helm.php" target="_blank">here</a></p>

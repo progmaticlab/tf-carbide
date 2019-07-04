@@ -79,7 +79,7 @@ include 'header.php';
    <p style="padding-left: 40px;">Connect to controller:</br>
    <code>ssh -i <?php echo $keyname; ?>.pem centos@<?php echo $sandbox_uri; ?></code></br>
    Get a dns name for access: </br>
-   <code>kubectl get svc | grep my-drupal-drupal | awk '{print $4}'</code></br>
+   <code>kubectl get svc -o wide | grep my-drupal-drupal | awk '{print $4}'</code></br>
    <p style="padding-left: 30px;">To connect to the services (pod, svc) of the K8S to which access from the outside not configured by default, you can use this path:</p>
    <p style="padding-left: 40px;">Forward a local controller port to a port on the pod: </br>
    <code>kubectl port-forward &lt;pod name|svc name&gt; &lt;local-port&gt;:&lt;pod-port&gt; &amp;</code></br>

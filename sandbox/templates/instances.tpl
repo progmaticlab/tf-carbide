@@ -50,3 +50,4 @@ contrail_configuration:
   DATABASE_NODEMGR__DEFAULTS__minimum_diskGB: "2"
   JVM_EXTRA_OPTS: "-Xms1g -Xmx2g"
   VROUTER_GATEWAY: 172.25.1.1
+  KUBERNETES_IP_FABRIC_SNAT: true

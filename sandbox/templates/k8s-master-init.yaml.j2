@@ -3,7 +3,7 @@ apiVersion: kubeadm.k8s.io/v1alpha1
 api:
   advertiseAddress: {{ listen_ip }}
 kubernetesVersion: {{ k8s_version }}
-clusterName: ${AWS_STACK_NAME}
+clusterName: ${K8S_CLUSTER_NAME}
 cloudProvider: aws
 tokenTTL: 0s
 kubeProxy:

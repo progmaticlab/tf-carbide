@@ -41,6 +41,8 @@ instances:
       k8s_node:
 global_configuration:
   CONTAINER_REGISTRY: $REGISTRY
+  K8S_VERSION: 1.13.0
+  K8S_CLUSTER_NAME: ${AWS_STACK_NAME}
 contrail_configuration:
   CONTRAIL_VERSION: latest
   CLOUD_ORCHESTRATOR: kubernetes

@@ -119,6 +119,8 @@ awk '
 { print }
 ' configure_k8s_master_node.yml > tmp && mv tmp configure_k8s_master_node.yml
 
+sed -ri 's/\|grep "forever"//g' configure_k8s_master_node.yml
+
 awk '
 {gsub(/kubeadm init --token-ttl 0 --kubernetes-version v{{ k8s_version }} --apiserver-advertise-address {{ listen_ip }} --pod-network-cidr {{ kube_pod_subnet }}/,"kubeadm init --ignore-preflight-errors=cri --config /tmp/k8s-master-init.yaml");}1
 ' configure_k8s_master_node.yml > tmp && mv tmp configure_k8s_master_node.yml
@@ -153,12 +155,12 @@ for i in "${K8S_WORKER_INSTANCES_ID[@]}"
   aws ec2 associate-iam-instance-profile --instance-id $i --iam-instance-profile Name="$K8S_WORKER_NODE_PROFILE"
 done
 
-aws ec2 create-tags --resources ${K8S_WORKER_INSTANCES_ID[@]} $AWS_SECURITY_GROUP_ID $K8S_MASTER_INSTANCE_ID --tags Key=KubernetesCluster,Value=kubernetes
+aws ec2 create-tags --resources ${K8S_WORKER_INSTANCES_ID[@]} $AWS_SECURITY_GROUP_ID $K8S_MASTER_INSTANCE_ID --tags Key=KubernetesCluster,Value=$AWS_STACK_NAME Key=kubernetes.io/cluster/$AWS_STACK_NAME,Value=owned
 
 
 
 echo "$(date +"%T %Z"): 6/7 Install Kubernetes ... " >> $status_log
-ansible-playbook -i inventory/ -e orchestrator=kubernetes playbooks/install_k8s.yml
+ansible-playbook -i inventory/ -e orchestrator=kubernetes -e k8s_clustername=$AWS_STACK_NAME playbooks/install_k8s.yml
 
 
 echo "$(date +"%T %Z"): 7/7 Install Tungsten Fabric ... " >> $status_log
@@ -178,6 +180,7 @@ ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t $K8S_MASTER <
  sudo kubectl get pods --all-namespaces
  sudo helm repo add incubator https://kubernetes-charts-incubator.storage.googleapis.com/
  sudo helm repo update
+ sudo helm install incubator/aws-alb-ingress-controller  --name my-alb --namespace kube-system
 exit
 EOF1
 

@@ -253,6 +253,14 @@ Resources:
                 Action: ec2:*
                 Effect: Allow
                 Resource: "*"
+              - Sid: Elbv2Permissions
+                Action:
+                  - elasticloadbalancing:DeleteLoadBalancer
+                  - elasticloadbalancing:CreateLoadBalancer
+                  - elasticloadbalancing:DescribeTags
+                  - elasticloadbalancing:DescribeLoadBalancers
+                Effect: Allow
+                Resource: "*"
   IAMUserKey:
     Type: AWS::IAM::AccessKey
     Properties:

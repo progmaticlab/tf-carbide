@@ -11,6 +11,16 @@ NODES=($(aws ec2 describe-instances \
     --filters "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
     --query 'Reservations[*].Instances[*].[InstanceId, Tags[?Key==`Name`].Value | [0]]' \
     --output text | grep -v ${AWS_STACK_NAME}-master-node | awk '{print $1}'))
+#remove all ALBs tagged by clustername
+for vpc in $( aws elbv2  describe-load-balancers | grep LoadBalancerArn | cut -f4 -d\" ) ; do
+    if ( aws elbv2  describe-tags --resource-arns $vpc | grep -q ${AWS_STACK_NAME} )
+        then
+            aws elbv2  delete-load-balancer --load-balancer-arn $vpc
+    fi
+    for subnet in $(aws ec2 describe-subnets --filters Name=vpc-id,Values=$vpc | grep SubnetId | cut -f4 -d\" ); do
+        aws ec2 delete-subnet --subnet-id=$subnet &> /dev/null;
+    done;
+done
 
 for i in "${NODES[@]}"
  do

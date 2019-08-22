@@ -12,14 +12,15 @@ NODES=($(aws ec2 describe-instances \
     --query 'Reservations[*].Instances[*].[InstanceId, Tags[?Key==`Name`].Value | [0]]' \
     --output text | grep -v ${AWS_STACK_NAME}-master-node | awk '{print $1}'))
 #remove all ALBs tagged by clustername
-for vpc in $( aws elbv2  describe-load-balancers | grep LoadBalancerArn | cut -f4 -d\" ) ; do
-    if ( aws elbv2  describe-tags --resource-arns $vpc | grep -q ${AWS_STACK_NAME} )
+for alb in $( aws elbv2  describe-load-balancers | grep LoadBalancerArn | cut -f4 -d\" ) ; do
+    if ( aws elbv2  describe-tags --resource-arns $alb | grep -q ${AWS_STACK_NAME} )
         then
-            aws elbv2  delete-load-balancer --load-balancer-arn $vpc
-    fi
-    for subnet in $(aws ec2 describe-subnets --filters Name=vpc-id,Values=$vpc | grep SubnetId | cut -f4 -d\" ); do
-        aws ec2 delete-subnet --subnet-id=$subnet &> /dev/null;
+            vpc=$( aws elbv2  describe-load-balancers --load-balancer-arns $alb | grep VpcId | cut -f4 -d\")
+            aws elbv2  delete-load-balancer --load-balancer-arn $alb
+            for subnet in $(aws ec2 describe-subnets --filters Name=tag:aws:cloudformation:stack-name,Values=${AWS_STACK_NAME} | grep SubnetId | cut -f4 -d\" ); do
+                aws ec2 delete-subnet --subnet-id=$subnet >> /dev/null 2>&1
     done;
+    fi
 done
 
 for i in "${NODES[@]}"

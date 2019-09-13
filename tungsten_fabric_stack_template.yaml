@@ -6,7 +6,6 @@ Parameters:
     Type: String
     Default: t2.xlarge
     AllowedValues:
-      - t2.large
       - t2.xlarge
       - t2.2xlarge
   Password:
@@ -21,14 +20,16 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
     MinLength: '1'
     ConstraintDescription: Must be the name of an existing EC2 KeyPair
-  Build:
-    Description: You can use stable or latest version of the Tungsten Fabric (Default = stable)
+  GceAuthJsonFile:
+    Description: Optional. If set, a multi-cloud example will be deployed. Insert content of  GCE service account key json file.
     Type: String
-    Default: stable
-    AllowedValues:
-      - stable
-      - latest
-
+    NoEcho: 'true'
+Conditions:
+  MultiCloud:
+    Fn::Not:
+      - Fn::Equals:
+          - ''
+          - Ref: GceAuthJsonFile
 Mappings:
   Region2Image:
     ap-northeast-1:
@@ -179,7 +180,11 @@ Resources:
       VpcId:
         Ref: VPC
       SecurityGroupIngress:
-        - CidrIp: 172.25.0.0/16
+        - CidrIp: 172.16.0.0/12
+          IpProtocol: "-1"
+        - CidrIp: 10.0.0.0/8 
+          IpProtocol: "-1"
+        - CidrIp: 192.168.0.0/16 
           IpProtocol: "-1"
         - CidrIp: 0.0.0.0/0
           IpProtocol: tcp
@@ -470,9 +475,14 @@ Resources:
               echo export AWS_STACK_NAME=${AWS::StackName} >> /etc/environment
               echo export AWS_INSTANCETYPE=${InstanceType} >> /etc/environment
               echo export AWS_USERKEY=${KeyPair} >> /etc/environment
-              echo export BUILD=${Build} >> /etc/environment
+              echo export AWS_VPC=${VPC} >> /etc/environment
+              echo export AWS_RT=${RouteTable} >> /etc/environment
+              echo export BUILD=stable >> /etc/environment
               echo export AWS_MP=${MN} >> /etc/environment
               echo export AWS_WP=${WN} >> /etc/environment
+              cat << EOF > /root/gce.json
+              ${GceAuthJsonFile}
+              EOF
               source /etc/environment
               curl "$BUCKET_URI"/setup_site.sh -o /tmp/setup_site.sh
               chmod +x /tmp/setup_site.sh
@@ -502,6 +512,4 @@ Metadata:
         Parameters:
           - InstanceType
           - Password
-          - Build
           - KeyPair
-

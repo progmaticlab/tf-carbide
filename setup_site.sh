@@ -36,6 +36,10 @@ unzip /tmp/awscli-bundle.zip -d/tmp
 
 echo "apache ALL=(ALL) NOPASSWD:SETENV: /opt/sandbox/scripts/*.sh" > /etc/sudoers.d/777-sandbox
 # workaround(epel dependencies broken )
-sudo -H -u centos sudo pip install boto3
+KEY_W=$(cat /home/centos/gce.json | wc -w)
+if [ "$KEY_W" != "0" ]; then
+  export DEPLOY_TYPE=multicloud
+fi
 
+sudo -H -u centos sudo pip install boto3
 sudo -H -u centos /opt/sandbox/scripts/deploy_tf.sh &>> /var/log/sandbox/deployment.log || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log

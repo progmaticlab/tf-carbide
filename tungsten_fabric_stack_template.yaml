@@ -468,7 +468,7 @@ Resources:
             - |
               #!/bin/bash -xe
               yum -y install httpd php mod_ssl openssl jq
-              echo export BUCKET_URI="https://s3-us-west-2.amazonaws.com/tungsten-fabric-sandbox" >> /etc/environment
+              echo export BUCKET_URI="https://s3-us-west-1.amazonaws.com/testtf" >> /etc/environment
               echo export AWS_ACCESS_KEY_ID=${IAMUserKey} >> /etc/environment
               echo export AWS_SECRET_ACCESS_KEY=${IAMUserKey.SecretAccessKey} >> /etc/environment
               echo export AWS_DEFAULT_REGION=${AWS::Region} >> /etc/environment

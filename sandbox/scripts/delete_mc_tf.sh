@@ -31,7 +31,6 @@ gcloud -q compute forwarding-rules delete fr-tf-gw-esp --region $GCE_REGION
 gcloud -q compute forwarding-rules delete fr-tf-gw-udp500 --region $GCE_REGION
 gcloud -q compute forwarding-rules delete fr-tf-gw-udp4500 --region $GCE_REGION
 gcloud -q compute firewall-rules delete tf-fw-local
-gcloud -q compute firewall-rules delete tf-fw-from-aws
 gcloud -q compute firewall-rules delete tf-fw-inet
 gcloud -q compute addresses delete tf-node1-int-ip
 gcloud -q compute addresses delete tf-gw-ip

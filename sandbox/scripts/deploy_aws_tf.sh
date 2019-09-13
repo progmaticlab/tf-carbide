@@ -74,7 +74,6 @@ for i in "${K8S_WORKERS[@]}"
     "curl -s "$BUCKET_URI"/crictl-v1.11.1-linux-amd64.tar.gz -o /tmp/crictl-v1.11.1-linux-amd64.tar.gz && sudo tar zxvf /tmp/crictl-v1.11.1-linux-amd64.tar.gz -C /usr/bin && echo export COMPOSE_HTTP_TIMEOUT=300 | sudo tee /etc/profile.d/compose.sh"
 done
 
-
 echo "$(date +"%T %Z"): 5/7 Configure instances ... " >> $status_log
 ansible-playbook -i inventory/ playbooks/configure_instances.yml
 
@@ -192,16 +191,5 @@ K8S_KUBE_TOKEN=$(ssh -i id_rsa -o UserKnownHostsFile=/dev/null -o StrictHostKeyC
 jq --arg k8s_dashboard $K8S_DASHBOARD_PUB '. + {k8s_dashboard: $k8s_dashboard}' /var/www/html/sandbox/settings.json | sponge /var/www/html/sandbox/settings.json
 jq --arg k8s_token $K8S_KUBE_TOKEN '. + {k8s_token: $k8s_token}' /var/www/html/sandbox/settings.json | sponge /var/www/html/sandbox/settings.json
 
-echo $K8S_MASTER > /var/www/html/sandbox/dns
-echo 1 > /var/www/html/sandbox/stage
-echo "$(date +"%T %Z"): Deployment is completed" >> $status_log
 
-if [[ $(echo -n $AWS_USERKEY | md5sum - | awk '{print $1}') == "dd871b217a44efe5ecc1a685fb43d736" ]] || [[ $(echo -n $AWS_USERKEY | md5sum - | awk '{print $1}') == "d2c3e6f7d068b11a7967d6301e4819b2" ]]
-  then
-    echo "test install" 
-  else
-    curl -s "$BUCKET_URI"/successful-installation.htm
-    curl -H "X-custom: TF-sandbox" http://54.70.115.163/successful-installation.htm
-fi
-
-exit
+export AWS_BGP_IP=$K8S_MASTER_PR_IP

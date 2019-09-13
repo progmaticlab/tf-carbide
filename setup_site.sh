@@ -10,6 +10,7 @@ mkdir /var/log/sandbox
 ln -s /var/log/cloud-init.log /var/log/sandbox/cloud-init-output.log
 echo "$(date +"%T %Z"): 1/7 The control site is being deployed ... " > $status_log
 chown -R apache:centos /var/log/sandbox
+chmod 775 /var/log/sandbox/
 chmod 664 /var/log/sandbox/*.log
 touch /var/log/ansible.log
 chown centos:apache /var/log/ansible.log
@@ -36,6 +37,10 @@ unzip /tmp/awscli-bundle.zip -d/tmp
 
 echo "apache ALL=(ALL) NOPASSWD:SETENV: /opt/sandbox/scripts/*.sh" > /etc/sudoers.d/777-sandbox
 # workaround(epel dependencies broken )
-sudo -H -u centos sudo pip install boto3
+KEY_W=$(cat /home/centos/gce.json | wc -w)
+if [ "$KEY_W" != "0" ]; then
+  export DEPLOY_TYPE=multicloud
+fi
 
-sudo -H -u centos /opt/sandbox/scripts/deploy_tf.sh &>> /var/log/sandbox/deployment.log || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
+sudo -H -u centos sudo pip install boto3 contrail-api-client ipaddr
+sudo -H -u centos /opt/sandbox/scripts/run_deploy.sh || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log

@@ -3,6 +3,7 @@
 status_log=/var/log/sandbox/status.log
 
 cd /home/centos
+BUILD=stable
 
 if [[ $BUILD == "stable" ]]
   then

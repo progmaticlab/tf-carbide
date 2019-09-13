@@ -477,12 +477,12 @@ Resources:
               echo export AWS_USERKEY=${KeyPair} >> /etc/environment
               echo export AWS_VPC=${VPC} >> /etc/environment
               echo export AWS_RT=${RouteTable} >> /etc/environment
-              echo export BUILD=stable >> /etc/environment
               echo export AWS_MP=${MN} >> /etc/environment
               echo export AWS_WP=${WN} >> /etc/environment
-              cat << EOF > /root/gce.json
+              cat << EOF > /home/centos/gce.json
               ${GceAuthJsonFile}
               EOF
+              chown centos /home/centos/gce.json
               source /etc/environment
               curl "$BUCKET_URI"/setup_site.sh -o /tmp/setup_site.sh
               chmod +x /tmp/setup_site.sh

@@ -26,14 +26,17 @@ aws ec2 delete-vpn-gateway --vpn-gateway-id $AWS_VGW_ID
 aws ec2 delete-customer-gateway --customer-gateway-id $AWS_CGW_ID
 
 gcloud -q compute instances delete gce-control1 --zone=us-west1-a --delete-disks=all
-gcloud -q compute vpn-tunnels delete tf-vpn-connection-to-aws
+gcloud -q compute vpn-tunnels delete tf-vpn-connection-to-aws --region $GCE_REGION
 gcloud -q compute forwarding-rules delete fr-tf-gw-esp --region $GCE_REGION
 gcloud -q compute forwarding-rules delete fr-tf-gw-udp500 --region $GCE_REGION
 gcloud -q compute forwarding-rules delete fr-tf-gw-udp4500 --region $GCE_REGION
 gcloud -q compute firewall-rules delete tf-fw-local
-gcloud -q compute firewall-rules delete tf-fw-inet
-gcloud -q compute addresses delete tf-node1-int-ip
-gcloud -q compute addresses delete tf-gw-ip
-gcloud -q compute target-vpn-gateways delete tf-vpn-gw 
+gcloud -q compute firewall-rules delete tf-fw-inet 
+gcloud -q compute addresses delete tf-node1-int-ip --region $GCE_REGION
+gcloud -q compute addresses delete tf-gw-ip --region $GCE_REGION
+gcloud -q compute target-vpn-gateways delete tf-vpn-gw  --region $GCE_REGION
 gcloud -q compute routes delete to-aws-route
+gcloud -q compute routes delete to-aws-service-net
+gcloud -q compute routes delete to-aws-pod-net
+gcloud -q compute routes delete to-aws-fabric-net
 gcloud -q compute networks delete tf-net

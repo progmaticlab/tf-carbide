@@ -99,6 +99,25 @@ gcloud -q compute routes create to-aws-route \
     --network tf-net \
     --next-hop-vpn-tunnel-region $GCE_REGION
 
+gcloud -q compute routes create to-aws-service-net \
+    --destination-range 10.96.0.0/12 \
+    --next-hop-vpn-tunnel tf-vpn-connection-to-aws \
+    --network tf-net \
+    --next-hop-vpn-tunnel-region $GCE_REGION
+
+gcloud -q compute routes create to-aws-pod-net \
+    --destination-range 10.32.0.0/12 \
+    --next-hop-vpn-tunnel tf-vpn-connection-to-aws \
+    --network tf-net \
+    --next-hop-vpn-tunnel-region $GCE_REGION
+
+gcloud -q compute routes create to-aws-fabric-net \
+    --destination-range 10.64.0.0/12 \
+    --next-hop-vpn-tunnel tf-vpn-connection-to-aws \
+    --network tf-net \
+    --next-hop-vpn-tunnel-region $GCE_REGION
+
+
 aws ec2 enable-vgw-route-propagation --gateway-id $VPN_GW_ID --route-table-id $AWS_RT
 
 sudo pip install apache-libcloud chardet==2.3.0
@@ -121,20 +140,20 @@ gcloud -q compute instances create gce-control1 \
       --zone=us-west1-a \
       --private-network-ip tf-node1-int-ip
 sleep 10
-cat $SSH_KEY_PATH.pub | sed 's/^/centos: /' > pub_key
+cat $HOME/.ssh/authorized_keys | sed 's/^/centos: /' > pub_key
 gcloud compute instances add-metadata gce-control1 --zone=us-west1-a --metadata-from-file ssh-keys=pub_key
 
 # fix dhcp lease in GCE
 ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t centos@10.138.0.100 << EOF1
- sudo -s
- set -ex
- sed -i 's/dhcp/none/g'  /etc/sysconfig/network-scripts/ifcfg-eth0
- echo "IPADDR=10.138.0.100" >> /etc/sysconfig/network-scripts/ifcfg-eth0
- echo "NETMASK=255.255.240.0" >> /etc/sysconfig/network-scripts/ifcfg-eth0
- echo "GATEWAY=10.138.0.1" >> /etc/sysconfig/network-scripts/ifcfg-eth0
- echo "DNS1=169.254.169.254" >> /etc/sysconfig/network-scripts/ifcfg-eth0
- systemctl restart network
- exit
+sudo -s
+rm -f /etc/cron.daily/0yum-daily.cron
+sed -i 's/dhcp/none/g'  /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "IPADDR=10.138.0.100" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "NETMASK=255.255.240.0" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "GATEWAY=10.138.0.1" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "DNS1=169.254.169.254" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+systemctl restart network
+exit
 exit
 EOF1
 
@@ -179,11 +198,10 @@ contrail_configuration:
   CONFIG_NODEMGR__DEFAULTS__minimum_diskGB: "6"
   DATABASE_NODEMGR__DEFAULTS__minimum_diskGB: "6"
   JVM_EXTRA_OPTS: "-Xms1g -Xmx2g"
-  KUBERNETES_IP_FABRIC_SNAT: true
   KUBERNETES_CLUSTER_NAME: k8s-gce
   KUBERNETES_POD_SUBNETS: 192.168.0.0/19
   KUBERNETES_SERVICE_SUBNETS: 192.168.32.0/19
-  KUBERNETES_IP_FABRIC_SUBNETS: 10.138.0.0/20
+  KUBERNETES_IP_FABRIC_SUBNETS: 192.138.64.0/19
   BGP_ASN: 64514
 EOF
 
@@ -192,12 +210,15 @@ curl https://raw.githubusercontent.com/Juniper/contrail-ansible-deployer/master/
   playbooks/roles/contrail_deployer/tasks/add_gce_container_hosts.yml
 
 # set custom ip ranges for K8S
-sed -i 's#--pod-network-cidr {{ kube_pod_subnet }}#--pod-network-cidr 192.168.0.0/19 --service-cidr 192.168.32.0/19#g' playbooks/roles/k8s/tasks/configure_k8s_master_node.yml
+sed -i 's#--pod-network-cidr {{ kube_pod_subnet }}#--pod-network-cidr 192.168.0.0/19 --service-cidr 192.168.32.0/19#g' \
+  playbooks/roles/k8s/tasks/configure_k8s_master_node.yml
 
 ansible-playbook -i inventory/ playbooks/configure_instances.yml
 ansible-playbook -i inventory/ -e orchestrator=kubernetes playbooks/install_k8s.yml
+
+ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t centos@10.138.0.100 \
+  sudo kubectl taint nodes gce-control1 node-role.kubernetes.io/master-
+
 ansible-playbook -i inventory/ -e orchestrator=kubernetes playbooks/install_contrail.yml
 
 #k8s post-fix
-ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t centos@10.138.0.100 \
-  sudo kubectl taint nodes gce-control1 node-role.kubernetes.io/master-

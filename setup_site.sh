@@ -42,5 +42,10 @@ if [ "$KEY_W" != "0" ]; then
   export DEPLOY_TYPE=multicloud
 fi
 
+<<<<<<< HEAD
 sudo -H -u centos sudo pip install boto3 contrail-api-client ipaddr
 sudo -H -u centos /opt/sandbox/scripts/run_deploy.sh || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
+=======
+sudo -H -u centos sudo pip install boto3
+sudo -H -u centos /opt/sandbox/scripts/deploy_tf.sh &>> /var/log/sandbox/deployment.log || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
+>>>>>>> aa2b6bbdb39184bcb885e3168984226423884201

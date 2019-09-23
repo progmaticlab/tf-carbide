@@ -1,7 +1,10 @@
 *.gz
 gce.json
 .vscode/
+<<<<<<< HEAD
 test.sh
 test1.sh
 test2.sh
 log*
+=======
+>>>>>>> aa2b6bbdb39184bcb885e3168984226423884201

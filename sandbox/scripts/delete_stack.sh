@@ -25,15 +25,22 @@ for alb in $( aws elbv2  describe-load-balancers | grep LoadBalancerArn | cut -f
     fi
 done
 
+for lb in $(aws elb describe-load-balancers | grep LoadBalancerName | cut -f4 -d\" ) ; do
+  if [[ $(aws elb describe-tags --load-balancer-names $lb) =~ $AWS_STACK_NAME ]]
+    then
+      aws elb delete-load-balancer  --load-balancer-name $lb
+  fi
+done
+
 for i in "${NODES[@]}"
  do
   ebs_list=($(aws ec2 describe-instances \
      --filters "Name=instance-id,Values=$i" \
      --query 'Reservations[*].Instances[*].BlockDeviceMappings[*].[DeviceName, Ebs.DeleteOnTermination]'\
      --output text | grep False | awk '{print $1}'))
-	
+
   if [[ ${#ebs_list[*]} -ne 0 ]]
-   then 
+   then
     for d in "${ebs_list[@]}"
      do
       aws ec2 modify-instance-attribute --instance-id $i --block-device-mappings "[{\"DeviceName\": \"${d}\",\"Ebs\":{\"DeleteOnTermination\":true}}]"

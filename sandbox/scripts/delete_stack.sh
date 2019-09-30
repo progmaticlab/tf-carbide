@@ -6,6 +6,9 @@ AWS_SECURITY_GROUP=$(curl http://169.254.169.254/latest/meta-data/security-group
 
 #DELETE tf nodes
 
+
+#kubectl scale deployment my-alb-aws-alb-ingress-controller  --replicas=0 -n kube-system
+
 NODES=($(aws ec2 describe-instances \
     --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
     --filters "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
@@ -17,9 +20,8 @@ for alb in $( aws elbv2  describe-load-balancers | grep LoadBalancerArn | cut -f
         then
             vpc=$( aws elbv2  describe-load-balancers --load-balancer-arns $alb | grep VpcId | cut -f4 -d\")
             aws elbv2  delete-load-balancer --load-balancer-arn $alb
-            for subnet in $(aws ec2 describe-subnets --filters Name=tag:aws:cloudformation:stack-name,Values=${AWS_STACK_NAME} | grep SubnetId | cut -f4 -d\" ); do
-                aws ec2 delete-subnet --subnet-id=$subnet >> /dev/null 2>&1
-    done;
+            alb_release=$(helm list | grep aws-alb-ingress-controller | awk '{print $1}')
+            helm delete $alb_release
     fi
 done
 

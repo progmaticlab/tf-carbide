@@ -97,7 +97,7 @@ sudo echo "CONTROLLER=${K8S_MASTER_PR_IP}" > /opt/sandbox/scripts/environment
 cp /tmp/sandbox/templates/k8s-master-init.yaml.j2 /home/centos/contrail-ansible-deployer/playbooks/roles/k8s/templates
 pushd /home/centos/contrail-ansible-deployer/playbooks/roles/k8s/tasks/
 awk -v qt="'" '
-/- name: enable kubelet service/ {
+/- name: enable kubelet service/ {configure_k8s_master_node
     print "- name: set cloud provider"
     print "  lineinfile:"
     print "      path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf"
@@ -180,7 +180,7 @@ ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t $K8S_MASTER <
  sudo kubectl get pods --all-namespaces
  sudo helm repo add incubator https://kubernetes-charts-incubator.storage.googleapis.com/
  sudo helm repo update
- sudo helm install incubator/aws-alb-ingress-controller --set clusterName=$AWS_STACK_NAME --set autoDiscoverAwsRegion=true --set autoDiscoverAwsVpcID=true  --name my-alb --namespace kube-system
+ sudo helm install incubator/aws-alb-ingress-controller --set clusterName=$AWS_STACK_NAME --set awsRegion=$AWS_DEFAULT_REGION  --set awsVpcID=$AWS_VPC  --name my-alb --namespace kube-system
 exit
 EOF1
 

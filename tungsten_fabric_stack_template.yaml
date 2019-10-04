@@ -107,17 +107,26 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 172.25.1.0/24
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+          Ref: 'AWS::Region'
       MapPublicIpOnLaunch: 'true'
       VpcId:
         Ref: VPC
       Tags:
         - Key: Name
           Value: tf-sandbox-subnet
-  IngressSubnetFirst:
+        - Key:
+            Fn::Sub: kubernetes.io/cluster/${AWS::StackName}
+          Value: shared
+        - Key:  kubernetes.io/role/elb
+          Value: 1
+  IngressAdditionalSubnet:
     Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone: !Select
-        - 0
+        - 1
         - !GetAZs
           Ref: 'AWS::Region'
       CidrBlock: 172.25.2.0/24
@@ -126,26 +135,7 @@ Resources:
         Ref: VPC
       Tags:
         - Key: Name
-          Value: tf-sandbox-ingress-subnet-first
-        - Key:
-           Fn::Sub: kubernetes.io/cluster/${AWS::StackName}
-          Value: shared
-        - Key:  kubernetes.io/role/elb
-          Value: 1
-  IngressSubnetSecond:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AvailabilityZone: !Select
-        - 1
-        - !GetAZs
-          Ref: 'AWS::Region'
-      CidrBlock: 172.25.3.0/24
-      MapPublicIpOnLaunch: 'true'
-      VpcId:
-        Ref: VPC
-      Tags:
-        - Key: Name
-          Value: tf-sandbox-ingress-subnet-second
+          Value: tf-sandbox-additional-ingress-subnet
         - Key:
             Fn::Sub: kubernetes.io/cluster/${AWS::StackName}
           Value: shared
@@ -158,20 +148,13 @@ Resources:
         Ref: RouteTable
       SubnetId:
         Ref: MainSubnet
-  IngressSubnetFirstRouteTable:
+  IngressAdditionalSubnetRouteTable:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId:
         Ref: RouteTable
       SubnetId:
-        Ref: IngressSubnetFirst
-  IngressSubnetSecondRouteTable:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId:
-        Ref: RouteTable
-      SubnetId:
-        Ref: IngressSubnetSecond
+        Ref: IngressAdditionalSubnet
   MasterNodeSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -473,6 +456,8 @@ Resources:
               echo export BUILD=${Build} >> /etc/environment
               echo export AWS_MP=${MN} >> /etc/environment
               echo export AWS_WP=${WN} >> /etc/environment
+              echo export AWS_VPC=${VPC} >> /etc/environment
+              echo export AWS_RT=${RouteTable} >> /etc/environment
               source /etc/environment
               curl "$BUCKET_URI"/setup_site.sh -o /tmp/setup_site.sh
               chmod +x /tmp/setup_site.sh

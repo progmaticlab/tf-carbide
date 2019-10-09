@@ -1,0 +1,21 @@
+conn multicloud
+    type=tunnel
+    authby=secret
+    left=%defaultroute
+    {% if 'aws' in group_names %}
+    leftid={{ aws_peer }}
+    leftsubnet=172.25.1.0/24
+    {% else %}
+    leftid={{ gce_peer }}
+    leftsubnet=10.138.0.0/22
+    {% endif %}
+    leftnexthop=%defaultroute
+    {% if 'aws' in group_names %}
+    right={{ gce_peer }}
+    rightsubnet=10.138.0.0/22
+    {% else %}
+    right={{ aws_peer }}
+    rightsubnet=172.25.1.0/24
+    {% endif %}
+    pfs=yes
+    auto=start

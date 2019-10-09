@@ -19,6 +19,8 @@ curl -s "$BUCKET_URI"/tungsten_fabric_sandbox.tar.gz -o /tmp/tungsten_fabric_san
 tar -xzf /tmp/tungsten_fabric_sandbox.tar.gz -C /tmp
 cp -r /tmp/sandbox/site /var/www/html/sandbox
 cp -r /tmp/sandbox/scripts /opt/sandbox/scripts
+cp -r /tmp/sandbox/ansible-openswan /home/centos/ansible-openswan
+chown -R centos /home/centos/ansible-openswan
 cp -f /tmp/sandbox/templates/ssl.conf /etc/httpd/conf.d/ssl.conf
 ln -s /var/log/sandbox/ /var/www/html/sandbox/debug/logs
 chown centos /var/www/html/sandbox/dns /var/www/html/sandbox/stage /var/www/html/sandbox/wp_pass
@@ -30,7 +32,7 @@ echo "SetEnv AWS_USERKEY ${AWS_USERKEY}" >> /var/www/html/sandbox/.htaccess
 htpasswd -bc /etc/httpd/.htpasswd admin "$1"
 service httpd restart
 yum -y install epel-release
-yum -y install python-pip ansible-2.4.2.0-2.el7.noarch git unzip python-urllib3 python-boto pystache python-daemon jq moreutils
+yum -y install python-pip git unzip jq moreutils
 curl -s "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "/tmp/awscli-bundle.zip"
 unzip /tmp/awscli-bundle.zip -d/tmp
 /tmp/awscli-bundle/install -i /usr/local/aws -b /usr/bin/aws
@@ -42,10 +44,5 @@ if [ "$KEY_W" != "0" ]; then
   export DEPLOY_TYPE=multicloud
 fi
 
-<<<<<<< HEAD
-sudo -H -u centos sudo pip install boto3 contrail-api-client ipaddr
-sudo -H -u centos /opt/sandbox/scripts/run_deploy.sh || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
-=======
-sudo -H -u centos sudo pip install boto3
-sudo -H -u centos /opt/sandbox/scripts/deploy_tf.sh &>> /var/log/sandbox/deployment.log || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
->>>>>>> aa2b6bbdb39184bcb885e3168984226423884201
+sudo -H -u centos sudo pip install boto boto3 contrail-api-client ipaddr netaddr apache-libcloud chardet==2.3.0 pystache python-daemon ansible==2.4.2 demjson
+#sudo -H -u centos /opt/sandbox/scripts/run_deploy.sh || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log

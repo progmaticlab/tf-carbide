@@ -1,7 +1,5 @@
 #!/bin/bash -ex
 
-GCE_BGP_IP=${GCE_BGP_IP:-10.138.0.100}
-
 export $GCE_KEY=/home/centos/gce.json
 KEY_LEN=$(cat $GCE_KEY | wc -w)
 
@@ -9,7 +7,7 @@ KEY_LEN=$(cat $GCE_KEY | wc -w)
 [[ ! -z "$MULTICLOUD" ]] && echo "i run it!"
 
 /opt/sandbox/scripts/deploy_aws_tf.sh >> /var/log/sandbox/aws_deployment.log &
-[[ ! -z "$MULTICLOUD" ]] && /opt/sandbox/scripts/deploy_gce_tf.sh >> /var/log/sandbox/gce_deployment.log &
+[[ ! -z "$MULTICLOUD" ]] && /opt/sandbox/scripts/deploy_mc_tf.sh >> /var/log/sandbox/gce_deployment.log &
 
 wait
 
@@ -17,8 +15,8 @@ wait
 
 # Provision BGP routers
 
-[[ ! -z "$MULTICLOUD" ]] && python sandbox/scripts/add_bgp_router.py tungsten  AWS $AWS_BGP_IP 64512 $GCE_BGP_IP
-[[ ! -z "$MULTICLOUD" ]] && python sandbox/scripts/add_bgp_router.py tungsten  AWS $GCE_BGP_IP 64514 $AWS_BGP_IP
+[[ ! -z "$MULTICLOUD" ]] && python sandbox/scripts/add_bgp_router.py tungsten  AWS $AWS_CONTROL_PRV_IP 64512 $GCE_BGP_IP
+[[ ! -z "$MULTICLOUD" ]] && python sandbox/scripts/add_bgp_router.py tungsten  AWS $GCE_BGP_IP 64514 $AWS_CONTROL_PRV_IP
 
 # ToDo TF clusters connectivity test
 

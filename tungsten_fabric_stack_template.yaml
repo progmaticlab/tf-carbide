@@ -182,9 +182,7 @@ Resources:
       SecurityGroupIngress:
         - CidrIp: 172.16.0.0/12
           IpProtocol: "-1"
-        - CidrIp: 10.0.0.0/8 
-          IpProtocol: "-1"
-        - CidrIp: 192.168.0.0/16 
+        - CidrIp: 10.138.0.0/20 
           IpProtocol: "-1"
         - CidrIp: 0.0.0.0/0
           IpProtocol: tcp
@@ -210,6 +208,18 @@ Resources:
           IpProtocol: tcp
           FromPort: '8443'
           ToPort: '8443'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '4500'
+          ToPort: '4500'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: udp
+          FromPort: '4500'
+          ToPort: '4500'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: udp
+          FromPort: '500'
+          ToPort: '500'
       Tags:
         - Key: Name
           Value: tf-sandbox-sg

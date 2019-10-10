@@ -180,7 +180,7 @@ ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t $K8S_MASTER <
  sudo kubectl get pods --all-namespaces
  sudo helm repo add incubator https://kubernetes-charts-incubator.storage.googleapis.com/
  sudo helm repo update
- sudo helm install incubator/aws-alb-ingress-controller --set clusterName=$AWS_STACK_NAME --set awsRegion=$AWS_DEFAULT_REGION  --set awsVpcID=$AWS_VPC  --name my-alb --namespace kube-system
+ sudo helm install incubator/aws-alb-ingress-controller --set clusterName=$AWS_STACK_NAME --set autoDiscoverAwsRegion=true --set autoDiscoverAwsVpcID=true  --name my-alb --namespace kube-system
 exit
 EOF1
 

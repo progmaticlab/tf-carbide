@@ -4,24 +4,37 @@ source /etc/environment
 
 AWS_SECURITY_GROUP=$(curl http://169.254.169.254/latest/meta-data/security-groups)
 
-#DELETE tf nodes
-
-
-#kubectl scale deployment my-alb-aws-alb-ingress-controller  --replicas=0 -n kube-system
-
 NODES=($(aws ec2 describe-instances \
     --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
     --filters "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
     --query 'Reservations[*].Instances[*].[InstanceId, Tags[?Key==`Name`].Value | [0]]' \
     --output text | grep -v ${AWS_STACK_NAME}-master-node | awk '{print $1}'))
-#remove all ALBs tagged by clustername
+
+K8S_MASTER=$(aws ec2 describe-instances \
+    --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
+    --filters "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
+    --query 'Reservations[*].Instances[*].[PublicDnsName, InstanceId, Tags[?Key==`Name`].Value | [0]]' \
+    --output text | grep aws_control | awk '{print $1}')
+
+K8S_WORKERS=($(aws ec2 describe-instances \
+    --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
+    --filters "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
+    --query 'Reservations[*].Instances[*].[PublicDnsName, InstanceId, Tags[?Key==`Name`].Value | [0]]' \
+    --output text | grep aws_compute | awk '{print $1}'))
+
+#DELETE test LB chart
+scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no /tmp/sandbox/templates/*.yaml centos@$K8S_MASTER:~
+ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t $K8S_MASTER << EOF1
+ sudo helm delete --purge  my-alb &
+exit
+EOF1
+
+#DELETE all ALBs tagged by clustername
 for alb in $( aws elbv2  describe-load-balancers | grep LoadBalancerArn | cut -f4 -d\" ) ; do
     if ( aws elbv2  describe-tags --resource-arns $alb | grep -q ${AWS_STACK_NAME} )
         then
             vpc=$( aws elbv2  describe-load-balancers --load-balancer-arns $alb | grep VpcId | cut -f4 -d\")
             aws elbv2  delete-load-balancer --load-balancer-arn $alb
-            alb_release=$(helm list | grep aws-alb-ingress-controller | awk '{print $1}')
-            helm delete $alb_release
     fi
 done
 
@@ -49,6 +62,16 @@ for i in "${NODES[@]}"
   unset ebs_list
   aws ec2 terminate-instances --instance-ids $i
 done
+
+#DELETE Target groups
+for tg in $( aws elbv2 describe-target-groups  | grep TargetGroupArn | cut -f4 -d\"  ) ; do
+      if  ( aws elbv2  describe-tags --resource-arns $tg  | grep -q ${AWS_STACK_NAME}  )
+        then
+#          aws elbv2 deregister-targets  --target-group-arn $tg  --targets
+          aws elbv2 delete-target-group --target-group-arn $tg
+        fi
+done
+
 
 #DELETE Keys pair
 KPCOUNT=$(aws ec2 describe-key-pairs --output text | grep ${AWS_STACK_NAME}-stack-keys  | wc -l)

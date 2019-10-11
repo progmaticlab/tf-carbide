@@ -33,7 +33,6 @@ EOF1
 for alb in $( aws elbv2  describe-load-balancers | grep LoadBalancerArn | cut -f4 -d\" ) ; do
     if ( aws elbv2  describe-tags --resource-arns $alb | grep -q ${AWS_STACK_NAME} )
         then
-            vpc=$( aws elbv2  describe-load-balancers --load-balancer-arns $alb | grep VpcId | cut -f4 -d\")
             aws elbv2  delete-load-balancer --load-balancer-arn $alb
     fi
 done
@@ -79,6 +78,39 @@ if [ $KPCOUNT -gt 0 ]
  then
 	aws ec2 delete-key-pair --key-name ${AWS_STACK_NAME}-stack-keys
 fi
+
+#CHECK if vpc resources are deleted
+for i in {1..36}
+do
+ alb_check=""
+ lb_check=""
+ tg_check=""
+   for alb in $( aws elbv2  describe-load-balancers | grep LoadBalancerArn | cut -f4 -d\" ) ; do
+     if ( aws elbv2  describe-tags --resource-arns $alb | grep -q ${AWS_STACK_NAME} )
+         then
+             alb_check=false
+     fi
+ done
+
+ for lb in $(aws elb describe-load-balancers | grep LoadBalancerName | cut -f4 -d\" ) ; do
+   if [[ $(aws elb describe-tags --load-balancer-names $lb) =~ $AWS_STACK_NAME ]]
+     then
+       lb_check=false
+   fi
+ done
+
+ for lb in $(aws elb describe-load-balancers | grep LoadBalancerName | cut -f4 -d\" ) ; do
+   if [[ $(aws elb describe-tags --load-balancer-names $lb) =~ $AWS_STACK_NAME ]]
+     then
+       tg_check=false
+   fi
+done
+ if [  -z  $alb_check ] && [  -z $lb_check ] && [  -z $tg_check]
+ then
+ break
+ fi
+ sleep 5
+done
 
 #DELETE MasterNode & Stack
 aws cloudformation delete-stack --stack-name ${AWS_STACK_NAME}

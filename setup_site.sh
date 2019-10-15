@@ -43,6 +43,15 @@ KEY_W=$(cat /home/centos/gce.json | wc -w)
 if [ "$KEY_W" != "0" ]; then
   export DEPLOY_TYPE=multicloud
 fi
-
+sudo -H -u centos sudo pip install --upgrade pip setuptools
 sudo -H -u centos sudo pip install boto boto3 contrail-api-client ipaddr netaddr apache-libcloud chardet==2.3.0 pystache python-daemon ansible==2.4.2 demjson
 #sudo -H -u centos /opt/sandbox/scripts/run_deploy.sh || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
+
+$GCE_KEY=/home/centos/gce.json
+KEY_LEN=$(cat $GCE_KEY | wc -w)
+[[ $KEY_LEN -ne 0 ]] && export MULTICLOUD="yes"
+if [ ! -z "$MULTICLOUD" ]]; then
+    sudo -H -u centos /opt/sandbox/scripts/deploy_mc_tf.sh || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
+  else
+    sudo -H -u centos /opt/sandbox/scripts/run_deploy.sh || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
+fi

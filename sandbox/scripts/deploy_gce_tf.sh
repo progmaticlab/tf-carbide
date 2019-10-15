@@ -8,7 +8,6 @@ SSH_KEY_PATH="$HOME/.ssh/id_rsa"
 GCE_USER_EMAIL=$(jq -r '.client_email' $GCE_KEY_PATH)
 GCE_PROJECT_ID=$(jq -r '.project_id'  $GCE_KEY_PATH)
 
-
 [ -d "$HOME/contrail-ansible-deployer-gce" ] || git clone https://github.com/Juniper/contrail-ansible-deployer.git contrail-ansible-deployer-gce
 
 cd $HOME/contrail-ansible-deployer-gce

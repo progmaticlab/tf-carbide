@@ -66,6 +66,7 @@ gcloud -q compute instances create gce-compute1 \
       --zone=us-west1-a \
       --custom-cpu=2 \
       --custom-memory=13312MB \
+      --can-ip-forward \
       --subnet tf-net \
       --private-network-ip compute1-ip-int &
 
@@ -77,6 +78,7 @@ gcloud -q compute instances create gce-compute2 \
       --custom-cpu=2 \
       --custom-memory=13312MB \
       --subnet tf-net \
+      --can-ip-forward \
       --private-network-ip compute2-ip-int &
 wait
 
@@ -122,9 +124,12 @@ content=$(eval "echo \"$templ\"")
 echo "$content" > $config
 set -x
 
+# bug
+sudo pip install boto3
+
 ansible-playbook -i inventory/ playbooks/provision_instances.yml
 
-"AWS_CONTROL_PUB_IP=$(aws ec2 describe-instances \
+AWS_CONTROL_PUB_IP=$(aws ec2 describe-instances \
     --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
     --filters "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
     --query 'Reservations[*].Instances[*].[PublicIpAddress, Tags[?Key==`Name`].Value | [0]]' \
@@ -134,7 +139,7 @@ AWS_CONTROL_PRV_IP=$(aws ec2 describe-instances \
     --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
     --filters "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
     --query 'Reservations[*].Instances[*].[PrivateIpAddress, Tags[?Key==`Name`].Value | [0]]' \
-    --output text | grep aws_control | awk '{print $1}')"
+    --output text | grep aws_control | awk '{print $1}')
 
 AWS_CONTROL_INSTANCE_ID=$(aws ec2 describe-instances \
     --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
@@ -168,8 +173,14 @@ EOF
 ansible-playbook -i hosts.yml openswan.yml
 cd $HOME
 
-#/opt/sandbox/scripts/deploy_gce_tf.sh >> /var/log/sandbox/gce_deployment.log &
+/opt/sandbox/scripts/deploy_gce_tf.sh >> /var/log/sandbox/gce_deployment.log &
 #/opt/sandbox/scripts/deploy_aws_tf.sh >> /var/log/sandbox/aws_deployment.log &
+#wait
+cd $HOME/contrail-ansible-deployer
+ansible-playbook -i inventory/ playbooks/configure_instances.yml
+ansible-playbook -i inventory/ -e orchestrator=kubernetes playbooks/install_k8s.yml
+ansible-playbook -i inventory/ -e orchestrator=kubernetes playbooks/install_contrail.yml
+
 
 python /opt/sandbox/scripts/add_bgp_router.py tungsten  AWS $AWS_CONTROL_PRV_IP 64512 $GCP_CONTROL_PRV_IP
 python /opt/sandbox/scripts/add_bgp_router.py tungsten  GCE $GCP_CONTROL_PRV_IP 64514 $AWS_CONTROL_PRV_IP

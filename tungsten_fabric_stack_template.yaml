@@ -64,7 +64,7 @@ Mappings:
       AMI: ami-3ecc8f46
 
 Resources:
-  VPC:
+  VPC1:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: 172.25.0.0/16
@@ -75,7 +75,18 @@ Resources:
           Value: tf-sandbox-vpc
     DependsOn:
       - IAMUser
-  IGW:
+  VPC2:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.26.0.0/16
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name
+          Value: tf-sandbox-vpc
+    DependsOn:
+      - IAMUser
+  IGW1:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
@@ -83,106 +94,168 @@ Resources:
           Value: tf-sandbox-gw
     DependsOn:
       - IAMUser
-  IGWAttachment:
+  IGW2:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: tf-sandbox-gw
+    DependsOn:
+      - IAMUser
+  IGWAttachment1:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId:
-        Ref: VPC
+        Ref: VPC1
       InternetGatewayId:
-        Ref: IGW
-  RouteTable:
+        Ref: IGW1
+  IGWAttachment2:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: VPC2
+      InternetGatewayId:
+        Ref: IGW2
+  RouteTable1:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId:
-        Ref: VPC
-  RouteVPCAny:
+        Ref: VPC1
+  RouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC2
+  RouteVPCAny1:
     Type: AWS::EC2::Route
-    DependsOn: IGWAttachment
+    DependsOn: IGWAttachment1
     Properties:
       RouteTableId:
-        Ref: RouteTable
+        Ref: RouteTable1
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId:
-        Ref: IGW
-  MainSubnet:
-    Type: AWS::EC2::Subnet
+        Ref: IGW1
+  RouteVPCAny2:
+    Type: AWS::EC2::Route
+    DependsOn: IGWAttachment2
     Properties:
-      CidrBlock: 172.25.1.0/24
-      MapPublicIpOnLaunch: 'true'
-      VpcId:
-        Ref: VPC
-      Tags:
-        - Key: Name
-          Value: tf-sandbox-subnet
-  IngressSubnetFirst:
+      RouteTableId:
+        Ref: RouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: IGW2
+  Vpc1Subnet1:
     Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone: !Select
         - 0
         - !GetAZs
           Ref: 'AWS::Region'
-      CidrBlock: 172.25.2.0/24
+      CidrBlock: 172.25.1.0/24
       MapPublicIpOnLaunch: 'true'
       VpcId:
-        Ref: VPC
+        Ref: VPC1
       Tags:
         - Key: Name
-          Value: tf-sandbox-ingress-subnet-first
+          Value: Vpc1Subnet1
         - Key:
-           Fn::Sub: kubernetes.io/cluster/${AWS::StackName}
+            Fn::Sub: kubernetes.io/cluster/${AWS::StackName}
           Value: shared
-        - Key:  kubernetes.io/role/elb
+        - Key: kubernetes.io/role/elb
           Value: 1
-  IngressSubnetSecond:
+  Vpc1Subnet2:
     Type: AWS::EC2::Subnet
     Properties:
       AvailabilityZone: !Select
         - 1
         - !GetAZs
           Ref: 'AWS::Region'
-      CidrBlock: 172.25.3.0/24
+      CidrBlock: 172.25.2.0/24
       MapPublicIpOnLaunch: 'true'
       VpcId:
-        Ref: VPC
+        Ref: VPC1
       Tags:
         - Key: Name
-          Value: tf-sandbox-ingress-subnet-second
+          Value: Vpc1Subnet2
         - Key:
             Fn::Sub: kubernetes.io/cluster/${AWS::StackName}
           Value: shared
-        - Key:  kubernetes.io/role/elb
+        - Key: kubernetes.io/role/elb
           Value: 1
-  MainSubnetRouteTable:
+  Vpc2Subnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+          Ref: 'AWS::Region'
+      CidrBlock: 172.26.1.0/24
+      MapPublicIpOnLaunch: 'true'
+      VpcId:
+        Ref: VPC2
+      Tags:
+        - Key: Name
+          Value: Vpc2Subnet1
+        - Key:
+            Fn::Sub: kubernetes.io/cluster/${AWS::StackName}
+          Value: shared
+        - Key: kubernetes.io/role/elb
+          Value: 1
+  Vpc2Subnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs
+          Ref: 'AWS::Region'
+      CidrBlock: 172.26.2.0/24
+      MapPublicIpOnLaunch: 'true'
+      VpcId:
+        Ref: VPC2
+      Tags:
+        - Key: Name
+          Value: Vpc2Subnet2
+        - Key:
+            Fn::Sub: kubernetes.io/cluster/${AWS::StackName}
+          Value: shared
+        - Key: kubernetes.io/role/elb
+          Value: 1
+  Vpc1Subnet1RouteTable1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId:
-        Ref: RouteTable
+        Ref: RouteTable1
       SubnetId:
-        Ref: MainSubnet
-  IngressSubnetFirstRouteTable:
+        Ref: Vpc1Subnet1
+  Vpc1Subnet2RouteTable1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId:
-        Ref: RouteTable
+        Ref: RouteTable1
       SubnetId:
-        Ref: IngressSubnetFirst
-  IngressSubnetSecondRouteTable:
+        Ref: Vpc1Subnet2
+  Vpc2Subnet1RouteTable2:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId:
-        Ref: RouteTable
+        Ref: RouteTable2
       SubnetId:
-        Ref: IngressSubnetSecond
-  MasterNodeSG:
+        Ref: Vpc2Subnet1
+  Vpc2Subnet2RouteTable2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: RouteTable2
+      SubnetId:
+        Ref: Vpc2Subnet2
+  SGVpc1:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: tf security group
+      GroupDescription: tf security group vpc1
       VpcId:
-        Ref: VPC
+        Ref: VPC1
       SecurityGroupIngress:
         - CidrIp: 172.16.0.0/12
-          IpProtocol: "-1"
-        - CidrIp: 10.138.0.0/20 
           IpProtocol: "-1"
         - CidrIp: 0.0.0.0/0
           IpProtocol: tcp
@@ -222,7 +295,55 @@ Resources:
           ToPort: '500'
       Tags:
         - Key: Name
-          Value: tf-sandbox-sg
+          Value: tf-sandbox-sg-vpc1
+  SGVpc2:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: tf security group vpc2
+      VpcId:
+        Ref: VPC2
+      SecurityGroupIngress:
+        - CidrIp: 172.16.0.0/12
+          IpProtocol: "-1"
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '8143'
+          ToPort: '8143'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '8143'
+          ToPort: '8143'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '8443'
+          ToPort: '8443'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: '4500'
+          ToPort: '4500'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: udp
+          FromPort: '4500'
+          ToPort: '4500'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: udp
+          FromPort: '500'
+          ToPort: '500'
+      Tags:
+        - Key: Name
+          Value: tf-sandbox-sg-vpc2
   IAMUser:
     Type: AWS::IAM::User
     Properties:
@@ -466,12 +587,12 @@ Resources:
       NetworkInterfaces:
         - DeviceIndex: 0
           SubnetId:
-            Ref: MainSubnet
+            Ref: Vpc1Subnet1
           PrivateIpAddresses:
             - PrivateIpAddress: 172.25.1.5
               Primary: 'true'
           GroupSet:
-            - Ref: MasterNodeSG
+            - Ref: SGVpc1
       UserData:
         Fn::Base64:
           Fn::Sub:
@@ -485,8 +606,14 @@ Resources:
               echo export AWS_STACK_NAME=${AWS::StackName} >> /etc/environment
               echo export AWS_INSTANCETYPE=${InstanceType} >> /etc/environment
               echo export AWS_USERKEY=${KeyPair} >> /etc/environment
-              echo export AWS_VPC=${VPC} >> /etc/environment
-              echo export AWS_RT=${RouteTable} >> /etc/environment
+              echo export AWS_VPC1=${VPC1} >> /etc/environment
+              echo export AWS_RT1=${RouteTable1} >> /etc/environment
+              echo export AWS_VPC2=${VPC2} >> /etc/environment
+              echo export AWS_RT2=${RouteTable2} >> /etc/environment
+              echo export AWS_VPC1_SG=${SGVpc1} >> /etc/environment
+              echo export AWS_VPC2_SG=${SGVpc2} >> /etc/environment
+              echo export AWS_VPC1_SUBNET1=${Vpc1Subnet1} >> /etc/environment
+              echo export AWS_VPC2_SUBNET1=${Vpc2Subnet1} >> /etc/environment
               echo export AWS_MP=${MN} >> /etc/environment
               echo export AWS_WP=${WN} >> /etc/environment
               cat << EOF > /home/centos/gce.json

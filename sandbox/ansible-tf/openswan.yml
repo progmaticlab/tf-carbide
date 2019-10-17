@@ -1,0 +1,6 @@
+- name: Deploy openswan
+  hosts: all
+  gather_facts: false
+  become: yes
+  roles:
+    - role: vpn-server

@@ -1,0 +1,58 @@
+---
+- name: download helm
+  unarchive:
+    src: "{{ helm_url }}"
+    dest: /tmp
+    remote_src: yes
+
+- name: copy helm binary
+  copy:
+    src: "/tmp/linux-amd64/helm"
+    dest: "/usr/bin/helm"
+    mode: 0755
+    remote_src: yes
+
+- name: copy manifests
+  copy:
+    src: aws_esb_storage_class.yaml
+    dest: /tmp/aws_esb_storage_class.yaml
+    mode: 064
+
+- name: copy manifests
+  copy:
+    src: rbac-config.yaml
+    dest: /tmp/rbac-config.yaml
+    mode: 0644
+
+- name: rbac
+  command: "/usr/bin/kubectl create -f /tmp/rbac-config.yaml"
+
+- name: storage
+  command: "/usr/bin/kubectl create -f /tmp/aws_esb_storage_class.yaml"
+
+- name: helm init
+  command: "/usr/bin/helm init --service-account tiller --upgrade"
+
+- name: Wait for tiller to be ready
+  command: "/usr/bin/helm list"
+  register: tiller_ready
+  until: tiller_ready.rc == 0
+  retries: 10
+  delay: 3
+
+- name: add repo
+  command: "/usr/bin/helm repo add incubator https://kubernetes-charts-incubator.storage.googleapis.com/"
+
+- name: repo update
+  command: "/usr/bin/helm repo update"
+
+- name: get cluster name
+  shell: "kubectl config get-contexts --no-headers=true | awk '{print $3}'"
+  register: cluster
+
+- name: debug
+  set_fact:
+    cluster_name: "{{ cluster.stdout }}"
+
+- name: install chart
+  command: "helm install incubator/aws-alb-ingress-controller --set clusterName=vpc2 --set autoDiscoverAwsRegion=true --set autoDiscoverAwsVpcID=true  --name my-alb --namespace kube-system"

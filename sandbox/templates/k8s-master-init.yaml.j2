@@ -1,3 +1,4 @@
+---
 apiVersion: kubeadm.k8s.io/v1beta1
 kind: InitConfiguration
 localAPIEndpoint:
@@ -8,11 +9,18 @@ nodeRegistration:
 ---
 apiVersion: kubeadm.k8s.io/v1beta1
 kind: ClusterConfiguration
-kubernetesVersion: {{ global_configuration.K8S_VERSION }}
-clusterName: {{ global_configuration.K8S_CLUSTER_NAME}}
+kubernetesVersion: {{ global_configuration.K8S_VERSION | default ('13.5') }}
+clusterName: {{ contrail_configuration.KUBERNETES_CLUSTER_NAME | default('k8s')}}
 networking:
-  podSubnet: {{ kube_pod_subnet }}
+  podSubnet: {{ contrail_configuration.KUBERNETES_POD_SUBNETS | default('10.32.0.0/12') }}
+  serviceSubnet: {{ contrail_configuration.KUBERNETES_SERVICE_SUBNETS | default('10.96.0.0/12') }}
+controllerManager:
+  extraArgs:
+    cloud-provider: aws
+apiServer:
+  extraArgs:
+    cloud-provider: aws
 ---
 apiVersion: kubeproxy.config.k8s.io/v1alpha1
 kind: KubeProxyConfiguration
-clusterCIDR: {{ kube_pod_subnet }}
+clusterCIDR: {{ contrail_configuration.KUBERNETES_POD_SUBNETS | default('10.32.0.0/12') }}

@@ -1,0 +1,30 @@
+- name: Set authorized key taken from file
+  authorized_key:
+    user: centos
+    state: present
+    key: "{{ lookup('file', '/home/centos/.ssh/authorized_keys') }}"
+
+- name: Copy crictl
+  copy:
+    src: "/tmp/crictl"
+    dest: "/usr/bin"
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Copy compose.sh
+  copy:
+    src: "compose.sh"
+    dest: "/etc/profile.d"
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: install required packages
+  yum:
+    name: 
+      - gcc
+      - python-lxml 
+      - python-devel
+      - openssl-devel
+    state: present

@@ -8,7 +8,13 @@ setenforce 0
 mkdir /opt/sandbox
 mkdir /var/log/sandbox
 ln -s /var/log/cloud-init.log /var/log/sandbox/cloud-init-output.log
-echo "$(date +"%T %Z"): 1/10 The control site is being deployed ... " > $status_log
+if [ "$DEPLOYMENT_TYPE" == MultiCloud ]; then
+    echo "$(date +"%T %Z"): 1/10 The control site is being deployed ... " > $status_log
+  else
+    echo "$(date +"%T %Z"): 1/7 The control site is being deployed ... " > $status_log
+fi
+touch /var/log/sandbox/ansible-vpc1.log
+touch /var/log/sandbox/ansible-vpc2.log
 chown -R apache:centos /var/log/sandbox
 chmod 775 /var/log/sandbox/
 chmod 664 /var/log/sandbox/*.log
@@ -42,4 +48,8 @@ echo "apache ALL=(ALL) NOPASSWD:SETENV: /opt/sandbox/scripts/*.sh" > /etc/sudoer
 
 sudo -H -u centos sudo pip install --upgrade pip setuptools
 sudo -H -u centos sudo pip install boto boto3 contrail-api-client ipaddr netaddr apache-libcloud chardet==2.3.0 pystache python-daemon ansible==2.7.12 demjson
-sudo -H -u centos /opt/sandbox/scripts/deploy_mc_on_aws.sh || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
+if [ "$DEPLOYMENT_TYPE" == MultiCloud ]; then
+    sudo -H -u centos /opt/sandbox/scripts/deploy_mc_on_aws.sh &>> /var/log/sandbox/deployment.log || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
+  else
+    sudo -H -u centos /opt/sandbox/scripts/deploy_tf.sh &>> /var/log/sandbox/deployment.log || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
+fi

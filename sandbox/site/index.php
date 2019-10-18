@@ -9,6 +9,7 @@ $deployment_log = 'debug/logs/deployment.log';
 
 $deploying_begin_state = 0;
 $completed_state = 1;
+$completed_multicloud =2;
 $invalid_state = 99;
 
 $keyname = getenv('AWS_USERKEY');
@@ -25,6 +26,14 @@ $wp_pass = file_get_contents('wp_pass');
 $k8s_dns = $set_array['k8s_dashboard'];
 $k8s_url = "https://".$k8s_dns.":8443";
 $k8s_token = trim($set_array['k8s_token']);
+
+$vpc1_control = $set_array['vpc1_control'];
+$vpc2_control = $set_array['vpc2_control'];
+$vpc1_compute1 = $set_array['vpc1_compute1'];
+$vpc2_compute1 = $set_array['vpc2_compute1'];
+$vpc1_compute2 = $set_array['vpc1_compute2'];
+$vpc2_compute2 = $set_array['vpc2_compute2'];
+
 
 $deploying_state_html = <<<DEPLOYING_STATE
 <h3>Deployment is in progress:</h3>
@@ -45,6 +54,35 @@ Note: Connection string there may be differences for your operating system or ss
 Use the <i>sudo</i> command to perform tasks with administrator privileges.</p>
 <p>You can use UI for Helm chart installation <a href="helm.php" target="_blank">here</a></p>
 COMPLETED_STATE;
+
+$completed_multicloud_html = <<<COMPLETED_MC
+<h3>Deployment is completed</h3>
+<table>
+  <tr>
+    <td>
+      <p><b>VPC1</b></p>
+      <p>Tungsten Fabric UI: <a href="https://$vpc1_control:8143" target="_blank">https://$vpc1_control:8143</a></p>
+      <p style="padding-left: 30px;">user name: <i>admin</i></br>user password: <i>contrail123</i></p>
+      <p>control node: $vpc1_control</br>
+      compute1 node: $vpc1_compute1</br>
+      compute2 node: $vpc1_compute2</p>
+    </td>
+    <td>
+      <p style="padding-left: 15px;"><b>VPC2</b></p>
+      <p style="padding-left: 15px;">Tungsten Fabric UI: <a href="https://$vpc2_control:8143" target="_blank">https://$vpc2_control:8143</a></p>
+      <p style="padding-left: 30px;">user name: <i>admin</i></br>user password: <i>contrail123</i></p>
+      <p style="padding-left: 15px;">control node: $vpc2_control</br>
+      compute1 node: $vpc2_compute1</br>
+      compute2 node: $vpc2_compute2</p></td>
+  </tr>
+</table>
+<p>To use Tungsten Fabric or Kubernetes command line utilities сonnect to the controller using the key specified during the deployment of CloudFormation stack and <b>centos</b> user name.</p>
+<p style="padding-left: 30px;">Example:</p>
+<p style="padding-left: 40px;"><code>ssh -i $keyname centos@$vpc1_control</code></br>
+<code>sudo kubectl get pods --all-namespaces</code></br>
+Note: Connection string there may be differences for your operating system or ssh client.</br>
+Use the <i>sudo</i> command to perform tasks with administrator privileges.</p>
+COMPLETED_MC;
 
 $k8s_dashboard_access = <<<K8S_ACCESS
 <p>Kubernetes dashboard: <a href="{$k8s_url}" target="_blank">{$k8s_url}</a></p>
@@ -128,11 +166,10 @@ INVALID_STATE;
       $statusview = file_get_contents($status_log);
       echo "<blockquote>";
       echo nl2br($statusview);
-      echo "</blockquote>";
-      
-       }
+      echo "</blockquote>";      
+      }
     if ($stage == $completed_state) {
-       if ($set_array['firstrun'] == 'true') {
+      if ($set_array['firstrun'] == 'true') {
            $set_array['firstrun'] = 'false';
            $settings = json_encode($set_array);
            file_put_contents ( 'settings.json', $settings);
@@ -143,7 +180,7 @@ INVALID_STATE;
            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
            $server_output = curl_exec ($ch);
            curl_close($ch);
-        }
+      }
       echo $completed_state_html;
       if (filter_var($k8s_url, FILTER_VALIDATE_URL) and !empty($k8s_token)) {
            echo $k8s_dashboard_access;
@@ -155,7 +192,28 @@ INVALID_STATE;
       echo $wp_block_html;
       }
       echo $delete_block_html;
-	}
+    }
+
+    if ($stage == $completed_multicloud) {
+      if ($set_array['firstrun'] == 'true') {
+           $set_array['firstrun'] = 'false';
+           $settings = json_encode($set_array);
+           file_put_contents ( 'settings.json', $settings);
+           $ch = curl_init();
+           $ip = $_SERVER['REMOTE_ADDR'];
+           curl_setopt($ch, CURLOPT_URL, "http://54.70.115.163/news.gif");
+           curl_setopt($ch, CURLOPT_HTTPHEADER, array("X-Forwarded-For: $ip", "User-Agent: Carbide"));
+           curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+           $server_output = curl_exec ($ch);
+           curl_close($ch);
+      }
+      echo $completed_multicloud_html;
+      echo $references_list;
+      if (!empty($wp_pass)) {
+      echo $wp_block_html;
+      }
+      echo $delete_block_html;
+    }
     if ($stage == $invalid_state) {
       echo $invalid_state_html;
       $data = array_slice(file ($deployment_log), -20);

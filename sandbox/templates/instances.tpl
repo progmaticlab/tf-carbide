@@ -42,7 +42,6 @@ instances:
 global_configuration:
   CONTAINER_REGISTRY: $REGISTRY
   K8S_VERSION: 1.13.4
-  K8S_CLUSTER_NAME: ${AWS_STACK_NAME}
 contrail_configuration:
   CONTRAIL_VERSION: latest
   CLOUD_ORCHESTRATOR: kubernetes
@@ -51,4 +50,5 @@ contrail_configuration:
   CONFIG_NODEMGR__DEFAULTS__minimum_diskGB: "2"
   DATABASE_NODEMGR__DEFAULTS__minimum_diskGB: "2"
   JVM_EXTRA_OPTS: "-Xms1g -Xmx2g"
+  KUBERNETES_CLUSTER_NAME: vpc1
   KUBERNETES_IP_FABRIC_SNAT: true

@@ -3,15 +3,10 @@
 status_log=/var/log/sandbox/status.log
 
 cd /home/centos
-BUILD=stable
 
-if [[ $BUILD == "stable" ]]
-  then
-    REGISTRY="carbidesandbox"
-    REPOHASH="4bf2fee7bc521e0a59ea5e25f339d185e8ce3977"
-  else
-    REGISTRY="opencontrailnightly"
-fi
+REGISTRY="carbidesandbox"
+REPOHASH="4bf2fee7bc521e0a59ea5e25f339d185e8ce3977"
+
 AWS_KEYS=${AWS_STACK_NAME}-stack-keys
 AWS_AMI_IMAGE=$(curl -s http://169.254.169.254/latest/meta-data/ami-id)
 AWS_SECURITY_GROUP=$(curl -s http://169.254.169.254/latest/meta-data/security-groups)
@@ -27,10 +22,7 @@ echo "$(date +"%T %Z"): 3/7 Download the repository ... " >> $status_log
 git clone https://github.com/Juniper/contrail-ansible-deployer
 
 cd contrail-ansible-deployer
-if [[ $BUILD == "stable" ]]
-  then
-    git checkout $REPOHASH
-fi
+git checkout $REPOHASH
 
 set +x
 config=/home/centos/contrail-ansible-deployer/config/instances.yaml
@@ -38,7 +30,6 @@ templ=$(cat /tmp/sandbox/templates/instances.tpl)
 content=$(eval "echo \"$templ\"")
 echo "$content" > $config
 set -x
-
 
 echo "$(date +"%T %Z"): 4/7 Provision instances ... " >> $status_log
 ansible-playbook -i inventory/ playbooks/provision_instances.yml
@@ -73,6 +64,7 @@ for i in "${K8S_WORKERS[@]}"
   ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t $i \
     "curl -s "$BUCKET_URI"/crictl-v1.11.1-linux-amd64.tar.gz -o /tmp/crictl-v1.11.1-linux-amd64.tar.gz && sudo tar zxvf /tmp/crictl-v1.11.1-linux-amd64.tar.gz -C /usr/bin && echo export COMPOSE_HTTP_TIMEOUT=300 | sudo tee /etc/profile.d/compose.sh"
 done
+
 
 echo "$(date +"%T %Z"): 5/7 Configure instances ... " >> $status_log
 ansible-playbook -i inventory/ playbooks/configure_instances.yml
@@ -122,8 +114,7 @@ awk '
 sed -ri 's/\|grep "forever"//g' configure_k8s_master_node.yml
 
 awk '
-{gsub(/kubeadm init --token-ttl 0 --kubernetes-version v{{ k8s_version }} --apiserver-advertise-address {{ listen_ip }}
- --pod-network-cidr {{ kube_pod_subnet }}/,"kubeadm init --ignore-preflight-errors=cri --config /tmp/k8s-master-init.yaml");}1
+{gsub(/kubeadm init --token-ttl 0 --kubernetes-version v{{ k8s_version }} --apiserver-advertise-address {{ listen_ip }} --pod-network-cidr {{ kube_pod_subnet }}/,"kubeadm init --ignore-preflight-errors=cri --config /tmp/k8s-master-init.yaml");}1
 ' configure_k8s_master_node.yml > tmp && mv tmp configure_k8s_master_node.yml
 
 awk '
@@ -144,7 +135,7 @@ awk -v qt="'" '
 
 awk '
 {gsub(/kubeadm join --token {{ hostvars\[k8s_master_name\].mastertoken }} --discovery-token-unsafe-skip-ca-verification {{ k8s_master_ip }}:6443/,
-      "kubeadm join --ignore-preflight-errors=cri --token {{ hostvars\[k8s_master_name\].mastertoken }} --discovery-token-unsafe-skip-ca-verification {{ k8s_master_ip }}:6443")
+    "kubeadm join --ignore-preflight-errors=cri --token {{ hostvars\[k8s_master_name\].mastertoken }} --discovery-token-unsafe-skip-ca-verification {{ k8s_master_ip }}:6443")
 }1' configure_k8s_join_node.yml > tmp && mv tmp configure_k8s_join_node.yml
 popd
 
@@ -157,6 +148,8 @@ for i in "${K8S_WORKER_INSTANCES_ID[@]}"
 done
 
 aws ec2 create-tags --resources ${K8S_WORKER_INSTANCES_ID[@]} $AWS_SECURITY_GROUP_ID $K8S_MASTER_INSTANCE_ID --tags Key=KubernetesCluster,Value=$AWS_STACK_NAME Key=kubernetes.io/cluster/$AWS_STACK_NAME,Value=owned
+
+
 
 echo "$(date +"%T %Z"): 6/7 Install Kubernetes ... " >> $status_log
 ansible-playbook -i inventory/ -e orchestrator=kubernetes -e k8s_clustername=$AWS_STACK_NAME playbooks/install_k8s.yml
@@ -179,7 +172,7 @@ ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t $K8S_MASTER <
  sudo kubectl get pods --all-namespaces
  sudo helm repo add incubator https://kubernetes-charts-incubator.storage.googleapis.com/
  sudo helm repo update
- sudo helm install incubator/aws-alb-ingress-controller --set clusterName=$AWS_STACK_NAME --set autoDiscoverAwsRegion=true --set autoDiscoverAwsVpcID=true  --name my-alb --namespace kube-system
+ sudo helm install incubator/aws-alb-ingress-controller --set clusterName=vpc1 --set autoDiscoverAwsRegion=true --set autoDiscoverAwsVpcID=true --name my-alb --namespace kube-system
 exit
 EOF1
 
@@ -189,3 +182,17 @@ K8S_KUBE_TOKEN_NAME=$(ssh -i id_rsa -o UserKnownHostsFile=/dev/null -o StrictHos
 K8S_KUBE_TOKEN=$(ssh -i id_rsa -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t centos@$K8S_MASTER_PR_IP "sudo kubectl describe secret $K8S_KUBE_TOKEN_NAME -n contrail" | grep "token:" | awk '{print $2}' | tr -d '\r')
 jq --arg k8s_dashboard $K8S_DASHBOARD_PUB '. + {k8s_dashboard: $k8s_dashboard}' /var/www/html/sandbox/settings.json | sponge /var/www/html/sandbox/settings.json
 jq --arg k8s_token $K8S_KUBE_TOKEN '. + {k8s_token: $k8s_token}' /var/www/html/sandbox/settings.json | sponge /var/www/html/sandbox/settings.json
+
+echo $K8S_MASTER > /var/www/html/sandbox/dns
+echo 1 > /var/www/html/sandbox/stage
+echo "$(date +"%T %Z"): Deployment is completed" >> $status_log
+
+if [[ $(echo -n $AWS_USERKEY | md5sum - | awk '{print $1}') == "dd871b217a44efe5ecc1a685fb43d736" ]] || [[ $(echo -n $AWS_USERKEY | md5sum - | awk '{print $1}') == "d2c3e6f7d068b11a7967d6301e4819b2" ]]
+  then
+    echo "test install" 
+  else
+    curl -s "$BUCKET_URI"/successful-installation.htm
+    curl -H "X-custom: TF-sandbox" http://54.70.115.163/successful-installation.htm
+fi
+
+exit

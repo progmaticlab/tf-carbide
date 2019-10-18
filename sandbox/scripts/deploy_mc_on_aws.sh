@@ -46,8 +46,10 @@ cp /tmp/sandbox/templates/k8s-master-init.yaml.j2 ${HOME}/vpc2-deployer/playbook
 # provision instances
 echo "$(date +"%T %Z"): 4/10 Provision instances ... " >> $status_log
 cd ${HOME}/vpc1-deployer
+sed -i 's#/var/log/ansible.log#var/log/sandbox/ansible-vpc1.log#' ansible.cfg
 ansible-playbook -i inventory/ playbooks/provision_instances.yml &
 cd ${HOME}/vpc2-deployer
+sed -i 's#/var/log/ansible.log#var/log/sandbox/ansible-vpc2.log#' ansible.cfg
 ansible-playbook -i inventory/ playbooks/provision_instances.yml &
 wait
 
@@ -55,13 +57,13 @@ wait
 echo "$(date +"%T %Z"): 5/10 Establish a Site-to-Site VPN Tunnel ... " >> $status_log
 AWS_VPC1_CONTROL_PUB_IP=$(aws ec2 describe-instances \
     --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
-    --filters "Name=instance.group-name,Values=${AWS_VPC1_SG_NAME}" \
+    --filters "Name=instance.group-id,Values=${AWS_VPC1_SG}" \
     --query 'Reservations[*].Instances[*].[PublicIpAddress, Tags[?Key==`Name`].Value | [0]]' \
     --output text | grep aws-vpc1-control | awk '{print $1}')
 
 AWS_VPC2_CONTROL_PUB_IP=$(aws ec2 describe-instances \
     --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
-    --filters "Name=instance.group-name,Values=${AWS_VPC2_SG_NAME}" \
+    --filters "Name=instance.group-id,Values=${AWS_VPC2_SG}" \
     --query 'Reservations[*].Instances[*].[PublicIpAddress, Tags[?Key==`Name`].Value | [0]]' \
     --output text | grep aws-vpc2-control | awk '{print $1}')
 
@@ -234,4 +236,49 @@ CONTROL_NODES_INV=$(aws ec2 describe-instances \
     --output text | grep -v 'master' | grep control | awk '{print $1}' | tr '\n' ',')
 
 cd $HOME/ansible-tf
-ansible-playbook -i $CONTROL_NODES_INV helm.yml
+ansible-playbook -i $CONTROL_NODES_INV helm.yml \
+    -e "aws_region=$AWS_DEFAULT_REGION" \
+    -e "aws_vpc1=$AWS_VPC1" \
+    -e "aws_vpc2=$AWS_VPC2"
+
+AWS_VPC1_COMPUTE1_PUB_IP=$(aws ec2 describe-instances \
+    --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
+    --filters "Name=instance.group-id,Values=${AWS_VPC1_SG}" \
+    --query 'Reservations[*].Instances[*].[PublicIpAddress, Tags[?Key==`Name`].Value | [0]]' \
+    --output text | grep compute1 | awk '{print $1}')
+
+AWS_VPC1_COMPUTE2_PUB_IP=$(aws ec2 describe-instances \
+    --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
+    --filters "Name=instance.group-id,Values=${AWS_VPC1_SG}" \
+    --query 'Reservations[*].Instances[*].[PublicIpAddress, Tags[?Key==`Name`].Value | [0]]' \
+    --output text | grep compute2 | awk '{print $1}')
+
+AWS_VPC2_COMPUTE1_PUB_IP=$(aws ec2 describe-instances \
+    --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
+    --filters "Name=instance.group-id,Values=${AWS_VPC2_SG}" \
+    --query 'Reservations[*].Instances[*].[PublicIpAddress, Tags[?Key==`Name`].Value | [0]]' \
+    --output text | grep compute1 | awk '{print $1}')
+
+AWS_VPC2_COMPUTE2_PUB_IP=$(aws ec2 describe-instances \
+    --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
+    --filters "Name=instance.group-id,Values=${AWS_VPC2_SG}" \
+    --query 'Reservations[*].Instances[*].[PublicIpAddress, Tags[?Key==`Name`].Value | [0]]' \
+    --output text | grep compute2 | awk '{print $1}')
+
+jq --arg vpc1_control $AWS_VPC1_CONTROL_PUB_IP '. + {vpc1_control: $vpc1_control}' /var/www/html/sandbox/settings.json | sponge /var/www/html/sandbox/settings.json
+jq --arg vpc2_control $AWS_VPC2_CONTROL_PUB_IP '. + {vpc2_control: $vpc2_control}' /var/www/html/sandbox/settings.json | sponge /var/www/html/sandbox/settings.json
+jq --arg vpc1_compute1 $AWS_VPC1_COMPUTE1_PUB_IP '. + {vpc1_compute1: $vpc1_compute1}' /var/www/html/sandbox/settings.json | sponge /var/www/html/sandbox/settings.json
+jq --arg vpc2_compute1 $AWS_VPC2_COMPUTE1_PUB_IP '. + {vpc2_compute1: $vpc2_compute1}' /var/www/html/sandbox/settings.json | sponge /var/www/html/sandbox/settings.json
+jq --arg vpc1_compute2 $AWS_VPC1_COMPUTE2_PUB_IP '. + {vpc1_compute2: $vpc1_compute2}' /var/www/html/sandbox/settings.json | sponge /var/www/html/sandbox/settings.json
+jq --arg vpc2_compute2 $AWS_VPC2_COMPUTE2_PUB_IP '. + {vpc2_compute2: $vpc2_compute2}' /var/www/html/sandbox/settings.json | sponge /var/www/html/sandbox/settings.json
+
+echo 2 > /var/www/html/sandbox/stage
+echo "$(date +"%T %Z"): Deployment is completed" >> $status_log
+
+if [[ $(echo -n $AWS_USERKEY | md5sum - | awk '{print $1}') == "dd871b217a44efe5ecc1a685fb43d736" ]] || [[ $(echo -n $AWS_USERKEY | md5sum - | awk '{print $1}') == "d2c3e6f7d068b11a7967d6301e4819b2" ]]
+  then
+    echo "test install" 
+  else
+    curl -s "$BUCKET_URI"/successful-installation.htm
+    curl -H "X-custom: TF-sandbox" http://54.70.115.163/successful-installation.htm
+fi

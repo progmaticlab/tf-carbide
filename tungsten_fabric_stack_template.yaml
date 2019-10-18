@@ -1,13 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Tungsten Fabric Sandbox
 Parameters:
-  InstanceType:
-    Description: EC2 instance type, select cheaper or faster (Default = t2.xlarge)
-    Type: String
-    Default: t2.xlarge
-    AllowedValues:
-      - t2.xlarge
-      - t2.2xlarge
   Password:
     Description: Password to log in to Sandbox with user name 'admin' (at least 6 characters)
     Type: String
@@ -20,16 +13,19 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
     MinLength: '1'
     ConstraintDescription: Must be the name of an existing EC2 KeyPair
-  GceAuthJsonFile:
-    Description: Optional. If set, a multi-cloud example will be deployed. Insert content of  GCE service account key json file.
+  DeploymentType:
+    Description: One cluster or two in different VPCs will be deployed.
     Type: String
-    NoEcho: 'true'
+    Default: SingleCloud
+    AllowedValues:
+      - SingleCloud
+      - MultiCloud
 Conditions:
   MultiCloud:
     Fn::Not:
       - Fn::Equals:
-          - ''
-          - Ref: GceAuthJsonFile
+          - 'SingleCloud'
+          - Ref: DeploymentType
 Mappings:
   Region2Image:
     ap-northeast-1:
@@ -159,7 +155,7 @@ Resources:
         - Key: Name
           Value: Vpc1Subnet1
         - Key:
-            Fn::Sub: kubernetes.io/cluster/${AWS::StackName}
+            Fn::Sub: kubernetes.io/cluster/vpc1
           Value: shared
         - Key: kubernetes.io/role/elb
           Value: 1
@@ -178,7 +174,7 @@ Resources:
         - Key: Name
           Value: Vpc1Subnet2
         - Key:
-            Fn::Sub: kubernetes.io/cluster/${AWS::StackName}
+            Fn::Sub: kubernetes.io/cluster/vpc1
           Value: shared
         - Key: kubernetes.io/role/elb
           Value: 1
@@ -197,7 +193,7 @@ Resources:
         - Key: Name
           Value: Vpc2Subnet1
         - Key:
-            Fn::Sub: kubernetes.io/cluster/${AWS::StackName}
+            Fn::Sub: kubernetes.io/cluster/vpc2
           Value: shared
         - Key: kubernetes.io/role/elb
           Value: 1
@@ -216,7 +212,7 @@ Resources:
         - Key: Name
           Value: Vpc2Subnet2
         - Key:
-            Fn::Sub: kubernetes.io/cluster/${AWS::StackName}
+            Fn::Sub: kubernetes.io/cluster/vpc2
           Value: shared
         - Key: kubernetes.io/role/elb
           Value: 1
@@ -395,6 +391,9 @@ Resources:
                   - elasticloadbalancing:CreateLoadBalancer
                   - elasticloadbalancing:DescribeTags
                   - elasticloadbalancing:DescribeLoadBalancers
+                  - elasticloadbalancing:DescribeTargetGroups
+                  - elasticloadbalancing:DeleteTargetGroup
+                  - elasticloadbalancing:DescribeTargetHealth
                 Effect: Allow
                 Resource: "*"
   IAMUserKey:
@@ -600,11 +599,12 @@ Resources:
               #!/bin/bash -xe
               yum -y install httpd php mod_ssl openssl jq
               echo export BUCKET_URI="https://s3-us-west-1.amazonaws.com/testtf" >> /etc/environment
+              echo export DEPLOYMENT_TYPE=${DeploymentType} >> /etc/environment
               echo export AWS_ACCESS_KEY_ID=${IAMUserKey} >> /etc/environment
               echo export AWS_SECRET_ACCESS_KEY=${IAMUserKey.SecretAccessKey} >> /etc/environment
               echo export AWS_DEFAULT_REGION=${AWS::Region} >> /etc/environment
               echo export AWS_STACK_NAME=${AWS::StackName} >> /etc/environment
-              echo export AWS_INSTANCETYPE=${InstanceType} >> /etc/environment
+              echo export AWS_INSTANCETYPE=t2.xlarge >> /etc/environment
               echo export AWS_USERKEY=${KeyPair} >> /etc/environment
               echo export AWS_VPC1=${VPC1} >> /etc/environment
               echo export AWS_RT1=${RouteTable1} >> /etc/environment
@@ -616,10 +616,6 @@ Resources:
               echo export AWS_VPC2_SUBNET1=${Vpc2Subnet1} >> /etc/environment
               echo export AWS_MP=${MN} >> /etc/environment
               echo export AWS_WP=${WN} >> /etc/environment
-              cat << EOF > /home/centos/gce.json
-              ${GceAuthJsonFile}
-              EOF
-              chown centos /home/centos/gce.json
               source /etc/environment
               curl "$BUCKET_URI"/setup_site.sh -o /tmp/setup_site.sh
               chmod +x /tmp/setup_site.sh
@@ -650,3 +646,4 @@ Metadata:
           - InstanceType
           - Password
           - KeyPair
+          - DeploymentType

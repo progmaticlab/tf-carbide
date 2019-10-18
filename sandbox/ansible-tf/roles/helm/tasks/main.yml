@@ -50,9 +50,19 @@
   shell: "kubectl config get-contexts --no-headers=true | awk '{print $3}'"
   register: cluster
 
-- name: debug
+- name: set cluster name
   set_fact:
     cluster_name: "{{ cluster.stdout }}"
 
+- name: set vpc id
+  set_fact:
+    aws_vpc: "{{ aws_vpc1 }}"
+  when: cluster_name == "vpc1"
+
+- name: set vpc id
+  set_fact:
+    aws_vpc: "{{ aws_vpc2 }}"
+  when: cluster_name == "vpc2"
+
 - name: install chart
-  command: "helm install incubator/aws-alb-ingress-controller --set clusterName=vpc2 --set autoDiscoverAwsRegion=true --set autoDiscoverAwsVpcID=true  --name my-alb --namespace kube-system"
+  command: "helm install incubator/aws-alb-ingress-controller --set clusterName={{ cluster_name }} --set awsRegion={{ aws_region }} --set awsVpcID={{ aws_vpc }} --name my-alb --namespace kube-system"

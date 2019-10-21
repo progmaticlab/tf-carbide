@@ -26,6 +26,11 @@ Conditions:
       - Fn::Equals:
           - 'SingleCloud'
           - Ref: DeploymentType
+  SingleCloud:
+    Fn::Not:
+      - Fn::Equals:
+          - 'MultiCloud'
+          - Ref: DeploymentType
 Mappings:
   Region2Image:
     ap-northeast-1:
@@ -73,6 +78,7 @@ Resources:
       - IAMUser
   VPC2:
     Type: AWS::EC2::VPC
+    Condition: MultiCloud
     Properties:
       CidrBlock: 172.26.0.0/16
       EnableDnsSupport: 'true'
@@ -92,6 +98,7 @@ Resources:
       - IAMUser
   IGW2:
     Type: AWS::EC2::InternetGateway
+    Condition: MultiCloud
     Properties:
       Tags:
         - Key: Name
@@ -107,6 +114,7 @@ Resources:
         Ref: IGW1
   IGWAttachment2:
     Type: AWS::EC2::VPCGatewayAttachment
+    Condition: MultiCloud
     Properties:
       VpcId:
         Ref: VPC2
@@ -119,6 +127,7 @@ Resources:
         Ref: VPC1
   RouteTable2:
     Type: AWS::EC2::RouteTable
+    Condition: MultiCloud
     Properties:
       VpcId:
         Ref: VPC2
@@ -133,6 +142,7 @@ Resources:
         Ref: IGW1
   RouteVPCAny2:
     Type: AWS::EC2::Route
+    Condition: MultiCloud
     DependsOn: IGWAttachment2
     Properties:
       RouteTableId:
@@ -180,6 +190,7 @@ Resources:
           Value: 1
   Vpc2Subnet1:
     Type: AWS::EC2::Subnet
+    Condition: MultiCloud
     Properties:
       AvailabilityZone: !Select
         - 0
@@ -199,6 +210,7 @@ Resources:
           Value: 1
   Vpc2Subnet2:
     Type: AWS::EC2::Subnet
+    Condition: MultiCloud
     Properties:
       AvailabilityZone: !Select
         - 1
@@ -232,6 +244,7 @@ Resources:
         Ref: Vpc1Subnet2
   Vpc2Subnet1RouteTable2:
     Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: MultiCloud
     Properties:
       RouteTableId:
         Ref: RouteTable2
@@ -239,6 +252,7 @@ Resources:
         Ref: Vpc2Subnet1
   Vpc2Subnet2RouteTable2:
     Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: MultiCloud
     Properties:
       RouteTableId:
         Ref: RouteTable2
@@ -294,6 +308,7 @@ Resources:
           Value: tf-sandbox-sg-vpc1
   SGVpc2:
     Type: AWS::EC2::SecurityGroup
+    Condition: MultiCloud
     Properties:
       GroupDescription: tf security group vpc2
       VpcId:
@@ -568,8 +583,65 @@ Resources:
       Path: "/"
       Roles:
         - !Ref K8sWorkerNodeRole
-  MasterNode:
+  MasterNodeSingle:
     Type: AWS::EC2::Instance
+    Condition: SingleCloud
+    Properties:
+      ImageId:
+        Fn::FindInMap:
+          - Region2Image
+          - Ref: AWS::Region
+          - AMI
+      InstanceType: t2.medium
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            DeleteOnTermination: "true"
+      KeyName:
+        Ref: KeyPair
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          SubnetId:
+            Ref: Vpc1Subnet1
+          PrivateIpAddresses:
+            - PrivateIpAddress: 172.25.1.5
+              Primary: 'true'
+          GroupSet:
+            - Ref: SGVpc1
+      UserData:
+        Fn::Base64:
+          Fn::Sub:
+            - |
+              #!/bin/bash -xe
+              yum -y install httpd php mod_ssl openssl jq
+              echo export BUCKET_URI="https://s3-us-west-1.amazonaws.com/testtf" >> /etc/environment
+              echo export DEPLOYMENT_TYPE=${DeploymentType} >> /etc/environment
+              echo export AWS_ACCESS_KEY_ID=${IAMUserKey} >> /etc/environment
+              echo export AWS_SECRET_ACCESS_KEY=${IAMUserKey.SecretAccessKey} >> /etc/environment
+              echo export AWS_DEFAULT_REGION=${AWS::Region} >> /etc/environment
+              echo export AWS_STACK_NAME=${AWS::StackName} >> /etc/environment
+              echo export AWS_INSTANCETYPE=t2.xlarge >> /etc/environment
+              echo export AWS_USERKEY=${KeyPair} >> /etc/environment
+              echo export AWS_VPC1=${VPC1} >> /etc/environment
+              echo export AWS_RT1=${RouteTable1} >> /etc/environment
+              echo export AWS_VPC1_SG=${SGVpc1} >> /etc/environment
+              echo export AWS_VPC1_SUBNET1=${Vpc1Subnet1} >> /etc/environment
+              echo export AWS_MP=${MN} >> /etc/environment
+              echo export AWS_WP=${WN} >> /etc/environment
+              source /etc/environment
+              curl "$BUCKET_URI"/setup_site.sh -o /tmp/setup_site.sh
+              chmod +x /tmp/setup_site.sh
+              /tmp/setup_site.sh ${Password}
+            - {
+              MN: !GetAtt K8sMasterNodeInstanceProfile.Arn,
+              WN: !GetAtt K8sWorkerNodeInstanceProfile.Arn
+            }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-master-node
+  MasterNodeMulti:
+    Type: AWS::EC2::Instance
+    Condition: MultiCloud
     Properties:
       ImageId:
         Fn::FindInMap:
@@ -628,14 +700,25 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName}-master-node
 Outputs:
-  MasterNodeURL:
+  MasterNodeURLMulti:
+    Condition: MultiCloud
     Description: URL for Master node of Sandbox (use user name 'admin' to log in)
     Value:
       Fn::Join:
         - ''
         - - https://
           - Fn::GetAtt:
-              - MasterNode
+              - MasterNodeMulti
+              - PublicDnsName
+  MasterNodeURLSingle:
+    Condition: SingleCloud
+    Description: URL for Master node of Sandbox (use user name 'admin' to log in)
+    Value:
+      Fn::Join:
+        - ''
+        - - https://
+          - Fn::GetAtt:
+              - MasterNodeSingle
               - PublicDnsName
 Metadata:
   AWS::CloudFormation::Interface:

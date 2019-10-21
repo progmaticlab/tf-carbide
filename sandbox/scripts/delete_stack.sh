@@ -49,6 +49,11 @@ if [ $KPCOUNT -gt 0 ]; then
     aws ec2 delete-key-pair --key-name ${AWS_STACK_NAME}-stack-keys
 fi
 
-sleep 35
+LB_SG=$(aws ec2 describe-security-groups \
+    --filters "Name=vpc-id,Values=${AWS_VPC1},${AWS_VPC2}" \
+    --filters "Name=tag:KubernetesCluster,Values=${AWS_STACK_NAME}-vpc1" \
+    --filters "Name=group-name,Values=k8s-elb-*" \
+    --query 'SecurityGroups[*].[GroupId]' \
+    --output text)
 
 aws cloudformation delete-stack --stack-name ${AWS_STACK_NAME}

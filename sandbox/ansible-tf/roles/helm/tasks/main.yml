@@ -63,6 +63,3 @@
   set_fact:
     aws_vpc: "{{ aws_vpc2 }}"
   when: cluster_name == "vpc2"
-
-- name: install chart
-  command: "helm install incubator/aws-alb-ingress-controller --set clusterName={{ cluster_name }} --set awsRegion={{ aws_region }} --set awsVpcID={{ aws_vpc }} --name my-alb --namespace kube-system"

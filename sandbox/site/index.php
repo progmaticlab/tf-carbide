@@ -46,7 +46,7 @@ $completed_state_html = <<<COMPLETED_STATE
 <hr>
 <p>Contrail UI: <a href="{$contrailurl}" target="_blank">{$contrailurl}</a></p>
 <p style="padding-left: 30px;">User name: <i>admin</i></br>User password: <i>contrail123</i></p>
-<p>To use Tungsten Fabric or Kubernetes command line utilities сonnect to the controller using the key specified during the deployment of CloudFormation stack and <b>centos</b> user name.</p>
+<p style="max-width: 900px;">To use Tungsten Fabric or Kubernetes command line utilities сonnect to the controller using the key specified during the deployment of CloudFormation stack and <b>centos</b> user name.</p>
 <p style="padding-left: 30px;">Example:</p>
 <p style="padding-left: 40px;"><code>ssh -i $keyname.pem centos@$sandbox_uri</code></br>
 <code>sudo kubectl get pods --all-namespaces</code></br>
@@ -57,18 +57,32 @@ COMPLETED_STATE;
 
 $completed_multicloud_html = <<<COMPLETED_MC
 <h3>Deployment is completed</h3>
+<img src="multicloud.svg" />
+<br><br>
+<p> Example of connectivity between clouds:</p>
+<p style="padding-left: 15px;">Connect to control node on VPC1 and deploy simple application:<br>
+<code>sudo kubectl apply -f https://tungsten-fabric-sandbox.s3-us-west-2.amazonaws.com/app-loc.yaml</code></p>
+<p style="padding-left: 15px;">Find a Pod's IP and Cluster IP:<br>
+<code>sudo kubectl get pods -o wide</code><br>
+<code>sudo kubectl get services</code></p>
+<p style="padding-left: 15px;">Connect to control node on VPC2 and check connectivity:<br>
+<code> sudo kubectl run -i --tty busybox --image=busybox -- sh <code></br>
+<code># wget -O - <i>&lt;service_ip&gt;</i><code><br>
+<code># wget -O - <i>&lt;pod_ip:8080&gt;</i><code></p>
+<br>
+
 <table>
   <tr>
     <td>
-      <p><b>VPC1</b></p>
-      <p>Tungsten Fabric UI: <a href="https://$vpc1_control:8143" target="_blank">https://$vpc1_control:8143</a></p>
+      <b>VPC1</b>
+      <p>Tungsten Fabric UI: <a href="https://$vpc1_control:8143" target="_blank">https://$vpc1_control:8143</a>&nbsp;&nbsp;&nbsp;&nbsp;</p>
       <p style="padding-left: 30px;">user name: <i>admin</i></br>user password: <i>contrail123</i></p>
       <p>control node: $vpc1_control</br>
       compute1 node: $vpc1_compute1</br>
       compute2 node: $vpc1_compute2</p>
     </td>
     <td>
-      <p style="padding-left: 15px;"><b>VPC2</b></p>
+      <b>&nbsp;&nbsp;VPC2</b>
       <p style="padding-left: 15px;">Tungsten Fabric UI: <a href="https://$vpc2_control:8143" target="_blank">https://$vpc2_control:8143</a></p>
       <p style="padding-left: 30px;">user name: <i>admin</i></br>user password: <i>contrail123</i></p>
       <p style="padding-left: 15px;">control node: $vpc2_control</br>
@@ -76,7 +90,8 @@ $completed_multicloud_html = <<<COMPLETED_MC
       compute2 node: $vpc2_compute2</p></td>
   </tr>
 </table>
-<p>To use Tungsten Fabric or Kubernetes command line utilities сonnect to the controller using the key specified during the deployment of CloudFormation stack and <b>centos</b> user name.</p>
+<p style="max-width: 920px;">In order to use Tungsten Fabric or Kubernetes CLI utils, 
+first сonnect to the controller via SSH using the key specified during the deployment of CloudFormation stack. The SSH username is <b>centos</b></p>
 <p style="padding-left: 30px;">Example:</p>
 <p style="padding-left: 40px;"><code>ssh -i $keyname centos@$vpc1_control</code></br>
 <code>sudo kubectl get pods --all-namespaces</code></br>

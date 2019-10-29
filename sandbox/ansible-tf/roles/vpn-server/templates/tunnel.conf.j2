@@ -7,12 +7,12 @@ conn multicloud
     leftsubnet=172.25.1.0/24
     {% else %}
     leftid={{ gce_peer }}
-    leftsubnet=172.26.1.0/24
+    leftsubnet=10.138.0.0/20
     {% endif %}
     leftnexthop=%defaultroute
     {% if 'aws' in group_names %}
     right={{ gce_peer }}
-    rightsubnet=172.26.1.0/24
+    rightsubnet=10.138.0.0/20
     {% else %}
     right={{ aws_peer }}
     rightsubnet=172.25.1.0/24

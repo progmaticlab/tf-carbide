@@ -1,7 +1,7 @@
-#!/bin/bash -e
+#!/bin/bash
 
 source /etc/environment
-
+AWS_VPC2_SG=${AWS_VPC2_SG:-$AWS_VPC1_SG}
 NODES=$(aws ec2 describe-instances \
     --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
     --filters "Name=instance.group-id,Values=${AWS_VPC1_SG},${AWS_VPC2_SG}" \
@@ -55,5 +55,7 @@ LB_SG=$(aws ec2 describe-security-groups \
     --filters "Name=group-name,Values=k8s-elb-*" \
     --query 'SecurityGroups[*].[GroupId]' \
     --output text)
+
+az group deployment create --no-wait --mode complete --template-file /tmp/sandbox/manifests/removeall.json --resource-group $AZ_RG
 
 aws cloudformation delete-stack --stack-name ${AWS_STACK_NAME}

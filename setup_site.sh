@@ -10,7 +10,9 @@ mkdir /var/log/sandbox
 ln -s /var/log/cloud-init.log /var/log/sandbox/cloud-init-output.log
 if [ "$DEPLOYMENT_TYPE" == MultiCloud ]; then
     echo "$(date +"%T %Z"): 1/10 The control site is being deployed ... " > $status_log
-  else
+elif [ "$DEPLOYMENT_TYPE" == MC_AZURE ]; then
+    echo "$(date +"%T %Z"): 1/99 The control site is being deployed ... " > $status_log
+else
     echo "$(date +"%T %Z"): 1/7 The control site is being deployed ... " > $status_log
 fi
 touch /var/log/sandbox/ansible-vpc1.log
@@ -47,9 +49,11 @@ tar zxvf /tmp/crictl-v1.11.1-linux-amd64.tar.gz -C /tmp
 echo "apache ALL=(ALL) NOPASSWD:SETENV: /opt/sandbox/scripts/*.sh" > /etc/sudoers.d/777-sandbox
 
 sudo -H -u centos sudo pip install --upgrade pip setuptools
-sudo -H -u centos sudo pip install boto boto3 contrail-api-client ipaddr netaddr apache-libcloud chardet==2.3.0 pystache python-daemon ansible==2.7.12 demjson
+sudo -H -u centos sudo pip install boto boto3 contrail-api-client ipaddr netaddr pystache python-daemon ansible==2.7.12
 if [ "$DEPLOYMENT_TYPE" == MultiCloud ]; then
     sudo -H -u centos /opt/sandbox/scripts/deploy_mc_on_aws.sh &>> /var/log/sandbox/deployment.log || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
-  else
+elif [ "$DEPLOYMENT_TYPE" == MC_AZURE ]; then
+    sudo -H -u centos /opt/sandbox/scripts/deploy_mc_on_azure.sh &>> /var/log/sandbox/deployment.log || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
+else
     sudo -H -u centos /opt/sandbox/scripts/deploy_tf.sh &>> /var/log/sandbox/deployment.log || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
 fi

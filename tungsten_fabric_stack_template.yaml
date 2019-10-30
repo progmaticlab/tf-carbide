@@ -14,23 +14,26 @@ Parameters:
     MinLength: '1'
     ConstraintDescription: Must be the name of an existing EC2 KeyPair
   DeploymentType:
-    Description: One cluster or two in different VPCs will be deployed.
+    Description: One cluster or two in different VPCs will be deployed on AWS.
     Type: String
     Default: SingleCloud
     AllowedValues:
       - SingleCloud
       - MultiCloud
+  AzureAuthJson:
+    Description: If set, a multi-cloud (AWS and Azure) example will be deployed . Insert json content of service principal for access to Azure resources.
+    Type: String
+    NoEcho: 'true'
 Conditions:
-  MultiCloud:
-    Fn::Not:
-      - Fn::Equals:
-          - 'SingleCloud'
-          - Ref: DeploymentType
-  SingleCloud:
-    Fn::Not:
-      - Fn::Equals:
-          - 'MultiCloud'
-          - Ref: DeploymentType
+  MultiCloudAzure:
+    !Not [!Equals [!Ref AzureAuthJson, '']]
+  MultiCloud: !And
+    - !Equals [ !Ref DeploymentType, 'MultiCloud' ]
+    - !Equals [!Ref AzureAuthJson, '']
+  SingleCloud: !And
+    - !Equals [ !Ref DeploymentType, 'SingleCloud' ]
+    - !Equals [!Ref AzureAuthJson, '']
+
 Mappings:
   Region2Image:
     ap-northeast-1:
@@ -614,7 +617,7 @@ Resources:
             - |
               #!/bin/bash -xe
               yum -y install httpd php mod_ssl openssl jq
-              echo export BUCKET_URI="https://s3-us-west-1.amazonaws.com/testtf" >> /etc/environment
+              echo export BUCKET_URI="https://testtf-ek.s3-us-west-1.amazonaws.com" >> /etc/environment
               echo export DEPLOYMENT_TYPE=${DeploymentType} >> /etc/environment
               echo export AWS_ACCESS_KEY_ID=${IAMUserKey} >> /etc/environment
               echo export AWS_SECRET_ACCESS_KEY=${IAMUserKey.SecretAccessKey} >> /etc/environment
@@ -670,7 +673,7 @@ Resources:
             - |
               #!/bin/bash -xe
               yum -y install httpd php mod_ssl openssl jq
-              echo export BUCKET_URI="https://s3-us-west-1.amazonaws.com/testtf" >> /etc/environment
+              echo export BUCKET_URI="https://testtf-ek.s3-us-west-1.amazonaws.com" >> /etc/environment
               echo export DEPLOYMENT_TYPE=${DeploymentType} >> /etc/environment
               echo export AWS_ACCESS_KEY_ID=${IAMUserKey} >> /etc/environment
               echo export AWS_SECRET_ACCESS_KEY=${IAMUserKey.SecretAccessKey} >> /etc/environment
@@ -688,6 +691,66 @@ Resources:
               echo export AWS_VPC2_SUBNET1=${Vpc2Subnet1} >> /etc/environment
               echo export AWS_MP=${MN} >> /etc/environment
               echo export AWS_WP=${WN} >> /etc/environment
+              source /etc/environment
+              curl "$BUCKET_URI"/setup_site.sh -o /tmp/setup_site.sh
+              chmod +x /tmp/setup_site.sh
+              /tmp/setup_site.sh ${Password}
+            - {
+              MN: !GetAtt K8sMasterNodeInstanceProfile.Arn,
+              WN: !GetAtt K8sWorkerNodeInstanceProfile.Arn
+            }
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-master-node
+  MasterNodeMultiAzure:
+    Type: AWS::EC2::Instance
+    Condition: MultiCloudAzure
+    Properties:
+      ImageId:
+        Fn::FindInMap:
+          - Region2Image
+          - Ref: AWS::Region
+          - AMI
+      InstanceType: t2.medium
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            DeleteOnTermination: "true"
+      KeyName:
+        Ref: KeyPair
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          SubnetId:
+            Ref: Vpc1Subnet1
+          PrivateIpAddresses:
+            - PrivateIpAddress: 172.25.1.5
+              Primary: 'true'
+          GroupSet:
+            - Ref: SGVpc1
+      UserData:
+        Fn::Base64:
+          Fn::Sub:
+            - |
+              #!/bin/bash -xe
+              yum -y install httpd php mod_ssl openssl jq
+              echo export BUCKET_URI="https://testtf-ek.s3-us-west-1.amazonaws.com" >> /etc/environment
+              echo export DEPLOYMENT_TYPE=MC_AZURE >> /etc/environment
+              echo export AWS_ACCESS_KEY_ID=${IAMUserKey} >> /etc/environment
+              echo export AWS_SECRET_ACCESS_KEY=${IAMUserKey.SecretAccessKey} >> /etc/environment
+              echo export AWS_DEFAULT_REGION=${AWS::Region} >> /etc/environment
+              echo export AWS_STACK_NAME=${AWS::StackName} >> /etc/environment
+              echo export AWS_INSTANCETYPE=t2.xlarge >> /etc/environment
+              echo export AWS_USERKEY=${KeyPair} >> /etc/environment
+              echo export AWS_VPC1=${VPC1} >> /etc/environment
+              echo export AWS_RT1=${RouteTable1} >> /etc/environment
+              echo export AWS_VPC1_SG=${SGVpc1} >> /etc/environment
+              echo export AWS_VPC1_SUBNET1=${Vpc1Subnet1} >> /etc/environment
+              echo export AWS_MP=${MN} >> /etc/environment
+              echo export AWS_WP=${WN} >> /etc/environment
+              cat << EOF > /home/centos/azure.json
+              ${AzureAuthJson}
+              EOF
+              chown centos /home/centos/azure.json
               source /etc/environment
               curl "$BUCKET_URI"/setup_site.sh -o /tmp/setup_site.sh
               chmod +x /tmp/setup_site.sh
@@ -720,6 +783,16 @@ Outputs:
           - Fn::GetAtt:
               - MasterNodeSingle
               - PublicDnsName
+  MasterNodeURLMultiAzure:
+    Condition: MultiCloudAzure
+    Description: URL for Master node of Sandbox (use user name 'admin' to log in)
+    Value:
+      Fn::Join:
+        - ''
+        - - https://
+          - Fn::GetAtt:
+              - MasterNodeMultiAzure
+              - PublicDnsName
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -730,3 +803,4 @@ Metadata:
           - Password
           - KeyPair
           - DeploymentType
+          - AzureAuthJson

@@ -2,6 +2,7 @@
 
 source /etc/environment
 AWS_VPC2_SG=${AWS_VPC2_SG:-$AWS_VPC1_SG}
+AZ_RG=${AZ_RG:-TF}
 NODES=$(aws ec2 describe-instances \
     --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
     --filters "Name=instance.group-id,Values=${AWS_VPC1_SG},${AWS_VPC2_SG}" \

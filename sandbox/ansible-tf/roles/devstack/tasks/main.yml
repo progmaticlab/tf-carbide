@@ -1,0 +1,64 @@
+- name: install the latest version of git
+  yum:
+    name: git
+    state: latest
+  become: yes
+  become_user: root
+
+- name: git clone TF devstack
+  git:
+    repo: https://github.com/tungstenfabric/tf-devstack.git
+    dest: /home/centos/tf-devstack
+
+- name: checkout
+  command: "git checkout {{ repohash | default('08b64e3a6b2a408e26a4851c237f61cb151914b5') }}"
+  args:
+    chdir: /home/centos/tf-devstack
+
+- name: copy manifests
+  copy:
+    src: "{{ manifest }}"
+    dest: "{{ KUBE_MANIFEST }}"
+    mode: 0644
+
+- name: copy ssh key
+  copy:
+    src: "/home/centos/.ssh/id_rsa"
+    dest: "/home/centos/.ssh/id_rsa"
+    owner: centos
+    group: centos
+    mode: 0600
+
+- name: install k8s and tf
+  command: "/home/centos/tf-devstack/k8s_manifests/startup.sh"
+  environment:
+    PATH: "{{ lookup('env','PATH') }}"
+    HOME: "{{ lookup('env','HOME') }}"
+    CONTROLLER_NODES: "{{ CONTROLLER_NODES }}"
+    AGENT_NODES: "{{ AGENT_NODES | default([]) }}"
+    CONTRAIL_POD_SUBNET: "{{ CONTRAIL_POD_SUBNET }}"
+    CONTRAIL_SERVICE_SUBNET: "{{ CONTRAIL_SERVICE_SUBNET }}"
+    KUBE_MANIFEST: "{{ KUBE_MANIFEST }}"
+    CONTRAIL_CONTAINER_TAG: "{{ CONTRAIL_CONTAINER_TAG }}"
+  args:
+    chdir: /home/centos/tf-devstack/k8s_manifests/
+  tags:
+  - deploy
+
+- name: Wait for kubectl to be ready
+  command: "/usr/local/bin/kubectl get pods --all-namespaces"
+  register: kubectl_ready
+  until: kubectl_ready.rc == 0
+  retries: 100
+  delay: 15
+
+- name: Wait for port 8082 to become open on the host
+  wait_for:
+    host: "{{ item }}"
+    port: 8082
+    delay: 10
+    timeout: 900
+    state: started
+  with_items:
+    - 10.138.0.100
+    - "{{ AWS_CONTROL }}"

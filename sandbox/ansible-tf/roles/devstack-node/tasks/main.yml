@@ -5,24 +5,21 @@
     key: "{{ lookup('file', '/home/centos/.ssh/authorized_keys') }}"
 
 - name: upgrade kernel
-  yum: name=kernel* state=latest
+  yum: 
+    name: kernel 
+    state: latest
 
-- name: Check for reboot hint.
-  shell: LAST_KERNEL=$(rpm -q --last kernel | awk 'NR==1{sub(/kernel-/,""); print $1}'); CURRENT_KERNEL=$(uname -r); if [ $LAST_KERNEL != $CURRENT_KERNEL ]; then echo 'reboot'; else echo 'no'; fi
-  ignore_errors: true
-  register: reboot_hint
+  register: upgrade_kernel
 
-- name: Rebooting ...
-  command: shutdown -r now "Reboot required for updated kernel"
+- name: restart server
+  shell: sleep 2 && shutdown -r now "Ansible updates triggered"
   async: 1
   poll: 0
-  sudo: true
-  ignore_errors: true
-  when: reboot_hint.stdout.find("reboot") != -1
+  become: true
+  when: upgrade_kernel is defined and upgrade_kernel.changed
 
-- name: Wait for the reboot to complete.
+- name: wait for server to come back online
   wait_for_connection:
-    connect_timeout: 20
-    sleep: 5
-    delay: 5
-    timeout: 300
+    delay: 30
+    timeout: 2400
+  when: upgrade_kernel is defined and upgrade_kernel.changed

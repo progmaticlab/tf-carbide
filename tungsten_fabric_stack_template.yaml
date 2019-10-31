@@ -270,6 +270,8 @@ Resources:
       SecurityGroupIngress:
         - CidrIp: 172.16.0.0/12
           IpProtocol: "-1"
+        - CidrIp: 10.138.0.0/20
+          IpProtocol: "-1"
         - CidrIp: 0.0.0.0/0
           IpProtocol: tcp
           FromPort: '22'

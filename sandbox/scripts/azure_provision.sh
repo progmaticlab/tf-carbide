@@ -69,6 +69,7 @@ az vm create --resource-group $AZ_RG \
     --location westus2 \
     --image centos \
     --nics devstackNIC \
+    --storage-sku os=StandardSSD_LRS \
     --generate-ssh-keys \
     --output json &
 

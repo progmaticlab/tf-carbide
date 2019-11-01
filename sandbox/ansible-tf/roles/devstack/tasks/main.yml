@@ -8,6 +8,7 @@
 - name: git clone TF devstack
   git:
     repo: https://github.com/tungstenfabric/tf-devstack.git
+#    repo: https://github.com/e-kuznetsov/tf-devstack
     dest: /home/centos/tf-devstack
 
 - name: checkout
@@ -21,7 +22,7 @@
     dest: "{{ KUBE_MANIFEST }}"
     mode: 0644
 
-- name: copy ssh key
+- name: copy private ssh key
   copy:
     src: "/home/centos/.ssh/id_rsa"
     dest: "/home/centos/.ssh/id_rsa"
@@ -29,10 +30,18 @@
     group: centos
     mode: 0600
 
+- name: copy pub ssh key
+  copy:
+    src: "/home/centos/.ssh/id_rsa.pub"
+    dest: "/home/centos/.ssh/id_rsa.pub"
+    owner: centos
+    group: centos
+    mode: 0644
+
 - name: install k8s and tf
   command: "/home/centos/tf-devstack/k8s_manifests/startup.sh"
   environment:
-    PATH: "{{ lookup('env','PATH') }}"
+    PATH: "/usr/local/bin:{{ lookup('env','PATH') }}"
     HOME: "{{ lookup('env','HOME') }}"
     CONTROLLER_NODES: "{{ CONTROLLER_NODES }}"
     AGENT_NODES: "{{ AGENT_NODES | default([]) }}"

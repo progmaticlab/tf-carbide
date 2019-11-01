@@ -49,7 +49,7 @@ tar zxvf /tmp/crictl-v1.11.1-linux-amd64.tar.gz -C /tmp
 echo "apache ALL=(ALL) NOPASSWD:SETENV: /opt/sandbox/scripts/*.sh" > /etc/sudoers.d/777-sandbox
 
 sudo -H -u centos sudo pip install --upgrade pip setuptools
-sudo -H -u centos sudo pip install boto boto3 contrail-api-client ipaddr netaddr pystache python-daemon ansible==2.7.12
+sudo -H -u centos sudo pip install boto boto3 contrail-api-client ipaddr netaddr pystache python-daemon ansible==2.7.12 future
 if [ "$DEPLOYMENT_TYPE" == MultiCloud ]; then
     sudo -H -u centos /opt/sandbox/scripts/deploy_mc_on_aws.sh &>> /var/log/sandbox/deployment.log || { echo 99 > /var/www/html/sandbox/stage; curl -s "$BUCKET_URI"/failed-installation.htm; } >> /var/log/sandbox/deployment.log
 elif [ "$DEPLOYMENT_TYPE" == MC_AZURE ]; then

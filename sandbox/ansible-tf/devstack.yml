@@ -1,6 +1,6 @@
 - name: Configure node
   hosts: all
-  gather_facts: false
+  gather_facts: False
   become: yes
   become_user: centos
   roles:

@@ -136,3 +136,38 @@ all:
     AWS_CONTROL: $AWS_CONTROL_PRV_IP
 EOF
 ansible-playbook -i hosts.yml devstack.yml
+
+echo "$(date +"%T %Z"): 9/10 Configure the BGP peering  ... " >> $status_log
+# add bgp peer
+python /opt/sandbox/scripts/provision_control.py --api_server_ip 10.138.0.100  --router_asn 64514
+python /opt/sandbox/scripts/add_bgp_router.py tungsten  AWS $AWS_CONTROL_PRV_IP 64512 10.138.0.100
+python /opt/sandbox/scripts/add_bgp_router.py tungsten  AZURE 10.138.0.100 64514 $AWS_CONTROL_PRV_IP
+
+
+TF_VN_VPC1_SRV_UUID=$(curl -s -X POST -H "Content-Type: application/json; charset=UTF-8" \
+    -d '{"fq_name": ["default-domain", "vpc1-default", "vpc1-default-service-network"], "type": "virtual-network"}' \
+    http://${AWS_CONTROL_PRV_IP}:8082/fqname-to-id | jq -r '.uuid')
+TF_VN_VPC1_POD_UUID=$(curl -s -X POST -H "Content-Type: application/json; charset=UTF-8" \
+    -d '{"fq_name": ["default-domain", "vpc1-default", "vpc1-default-pod-network"], "type": "virtual-network"}' \
+    http://${AWS_CONTROL_PRV_IP}:8082/fqname-to-id | jq -r '.uuid')
+
+TF_VN_VPC2_SRV_UUID=$(curl -s -X POST -H "Content-Type: application/json; charset=UTF-8" \
+    -d '{"fq_name": ["default-domain", "vpc2-default", "vpc2-default-service-network"], "type": "virtual-network"}' \
+    http://10.138.0.100:8082/fqname-to-id | jq -r '.uuid')
+TF_VN_VPC2_POD_UUID=$(curl -s -X POST -H "Content-Type: application/json; charset=UTF-8" \
+    -d '{"fq_name": ["default-domain", "vpc2-default", "vpc2-default-pod-network"], "type": "virtual-network"}' \
+    http://10.138.0.100:8082/fqname-to-id | jq -r '.uuid')
+
+curl -X PUT -H "Content-Type: application/json; charset=UTF-8" \
+    -d '{"virtual-network": {"import_route_target_list": {"route_target": ["target:64514:8000004","target:64514:8000001"]}}}' \
+    http://${AWS_CONTROL_PRV_IP}:8082/virtual-network/${TF_VN_VPC1_SRV_UUID}
+curl -X PUT -H "Content-Type: application/json; charset=UTF-8" \
+    -d '{"virtual-network": {"import_route_target_list": {"route_target": ["target:64514:8000004","target:64514:8000001"]}}}' \
+    http://${AWS_CONTROL_PRV_IP}:8082/virtual-network/${TF_VN_VPC1_POD_UUID}
+
+curl -X PUT -H "Content-Type: application/json; charset=UTF-8" \
+    -d '{"virtual-network": {"import_route_target_list": {"route_target": ["target:64512:8000004","target:64512:8000001"]}}}' \
+    http://10.138.0.100:8082/virtual-network/${TF_VN_VPC2_SRV_UUID}
+curl -X PUT -H "Content-Type: application/json; charset=UTF-8" \
+    -d '{"virtual-network": {"import_route_target_list": {"route_target": ["target:64512:8000004","target:64512:8000001"]}}}' \
+    http://10.138.0.100:8082/virtual-network/${TF_VN_VPC2_POD_UUID}

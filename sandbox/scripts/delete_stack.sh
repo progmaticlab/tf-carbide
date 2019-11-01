@@ -57,6 +57,5 @@ LB_SG=$(aws ec2 describe-security-groups \
     --output text)
 
 HOME=/tmp az login --service-principal -u $AZ_USER_ID --password $AZ_PASSWORD --tenant $AZ_TENANT
-HOME=/tmp az group deployment create --no-wait --mode complete --template-uri https://testtf-ek.s3-us-west-1.amazonaws.com/tungsten_fabric_stack_template.yaml --resource-group $AZ_RG
-
+HOME=/tmp az group deployment create --no-wait --mode complete --template-uri https://tungsten-fabric-sandbox.s3-us-west-2.amazonaws.com/manifests/removeall.json --resource-group $AZ_RG
 aws cloudformation delete-stack --stack-name ${AWS_STACK_NAME}

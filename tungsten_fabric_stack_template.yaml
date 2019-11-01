@@ -21,7 +21,7 @@ Parameters:
       - SingleCloud
       - MultiCloud
   AzureAuthJson:
-    Description: If set, a multi-cloud (AWS and Azure) example will be deployed . Insert json content of service principal for access to Azure resources.
+    Description: If set, a multi-cloud (AWS and Azure) example will be deployed. Insert json content of service principal for access to Azure resources. "DeploymentType" will be ignored.
     Type: String
     NoEcho: 'true'
 Conditions:

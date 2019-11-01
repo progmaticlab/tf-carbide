@@ -12,15 +12,17 @@ gpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/azu
 sudo yum install azure-cli -y
 
 AZ_USER_ID=$(cat $HOME/azure.json | jq -r '.appId')
-echo $AZ_USER_ID | sudo tee -a /etc/environment
+echo "export AZ_USER_ID=$AZ_USER_ID" | sudo tee -a /etc/environment
 AZ_PASSWORD=$(cat $HOME/azure.json | jq -r '.password')
-echo $AZ_PASSWORD | sudo tee -a /etc/environment
+echo "export AZ_PASSWORD=$AZ_PASSWORD" | sudo tee -a /etc/environment
 AZ_TENANT=$(cat $HOME/azure.json | jq -r '.tenant')
-echo $AZ_TENANT | sudo tee -a /etc/environment
+echo "export AZ_TENANT=$AZ_TENANT" | sudo tee -a /etc/environment
 AZ_RG=${AZ_RG:-TF}
-echo $AZ_RG | sudo tee -a /etc/environment
+echo "export AZ_RG=$AZ_RG" | sudo tee -a /etc/environment
 
 az login --service-principal -u $AZ_USER_ID --password $AZ_PASSWORD --tenant $AZ_TENANT
+cp -rf $HOME/.azure/ /tmp/.azure/
+sudo chown -R apache /tmp/.azure/
 
 az network vnet create --resource-group $AZ_RG \
     --name tfVNET \
@@ -143,5 +145,4 @@ az network vnet subnet update --resource-group $AZ_RG \
     --vnet-name tfVNET \
     --name tfSUBNET \
     --route-table tfrt
-
 wait

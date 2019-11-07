@@ -4,18 +4,18 @@ conn multicloud
     left=%defaultroute
     {% if 'aws' in group_names %}
     leftid={{ aws_peer }}
-    leftsubnet=172.25.1.0/24
+    leftsubnet={{ aws_subnet }}
     {% else %}
     leftid={{ gce_peer }}
-    leftsubnet=10.138.0.0/20
+    leftsubnet={{ gce_subnet }}
     {% endif %}
     leftnexthop=%defaultroute
     {% if 'aws' in group_names %}
     right={{ gce_peer }}
-    rightsubnet=10.138.0.0/20
+    rightsubnet={{ gce_subnet }}
     {% else %}
     right={{ aws_peer }}
-    rightsubnet=172.25.1.0/24
+    rightsubnet={{ aws_subnet }}
     {% endif %}
     pfs=yes
     auto=start

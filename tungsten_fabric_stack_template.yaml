@@ -21,9 +21,16 @@ Parameters:
       - SingleCloud
       - MultiCloud
   AzureAuthJson:
-    Description: If set, a multi-cloud (AWS and Azure) example will be deployed. Insert json content of service principal for access to Azure resources. "DeploymentType" will be ignored.
+    Description: If set, a multi-cloud (AWS and Azure) example will be deployed. Insert json content with password authentication of service principal for access to Azure resources. "DeploymentType" will be ignored.
     Type: String
     NoEcho: 'true'
+  AzureVMSize:
+    Description: When you use a Azure trial account it is possible to use only Standard_A2m_v2VM sizes(>50m deployment time). Standard_E4_v3 size recommended for a Pay-As-You-Go subscription(~25m deployment time).
+    Default: Standard_E4_v3
+    Type: String
+    AllowedValues:
+      - Standard_A2m_v2
+      - Standard_E4_v3
 Conditions:
   MultiCloudAzure:
     !Not [!Equals [!Ref AzureAuthJson, '']]
@@ -33,7 +40,6 @@ Conditions:
   SingleCloud: !And
     - !Equals [ !Ref DeploymentType, 'SingleCloud' ]
     - !Equals [!Ref AzureAuthJson, '']
-
 Mappings:
   Region2Image:
     ap-northeast-1:
@@ -619,7 +625,7 @@ Resources:
             - |
               #!/bin/bash -xe
               yum -y install httpd php mod_ssl openssl jq
-              echo export BUCKET_URI="https://testtf-ek.s3-us-west-1.amazonaws.com" >> /etc/environment
+              echo export BUCKET_URI="https://testtf.s3-us-west-1.amazonaws.com" >> /etc/environment
               echo export DEPLOYMENT_TYPE=${DeploymentType} >> /etc/environment
               echo export AWS_ACCESS_KEY_ID=${IAMUserKey} >> /etc/environment
               echo export AWS_SECRET_ACCESS_KEY=${IAMUserKey.SecretAccessKey} >> /etc/environment
@@ -675,7 +681,7 @@ Resources:
             - |
               #!/bin/bash -xe
               yum -y install httpd php mod_ssl openssl jq
-              echo export BUCKET_URI="https://testtf-ek.s3-us-west-1.amazonaws.com" >> /etc/environment
+              echo export BUCKET_URI="https://testtf.s3-us-west-1.amazonaws.com" >> /etc/environment
               echo export DEPLOYMENT_TYPE=${DeploymentType} >> /etc/environment
               echo export AWS_ACCESS_KEY_ID=${IAMUserKey} >> /etc/environment
               echo export AWS_SECRET_ACCESS_KEY=${IAMUserKey.SecretAccessKey} >> /etc/environment
@@ -735,7 +741,7 @@ Resources:
             - |
               #!/bin/bash -xe
               yum -y install httpd php mod_ssl openssl jq
-              echo export BUCKET_URI="https://testtf-ek.s3-us-west-1.amazonaws.com" >> /etc/environment
+              echo export BUCKET_URI="https://testtf.s3-us-west-1.amazonaws.com" >> /etc/environment
               echo export DEPLOYMENT_TYPE=MC_AZURE >> /etc/environment
               echo export AWS_ACCESS_KEY_ID=${IAMUserKey} >> /etc/environment
               echo export AWS_SECRET_ACCESS_KEY=${IAMUserKey.SecretAccessKey} >> /etc/environment
@@ -749,6 +755,7 @@ Resources:
               echo export AWS_VPC1_SUBNET1=${Vpc1Subnet1} >> /etc/environment
               echo export AWS_MP=${MN} >> /etc/environment
               echo export AWS_WP=${WN} >> /etc/environment
+              echo export AzureVMSize=${AzureVMSize} >> /etc/environment
               cat << EOF > /home/centos/azure.json
               ${AzureAuthJson}
               EOF
@@ -804,5 +811,12 @@ Metadata:
           - InstanceType
           - Password
           - KeyPair
+      - Label:
+          default: "Deployment type on AWS"
+        Parameters:
           - DeploymentType
+      - Label:
+          default: "Optional. Multi-cloud deployment with Azure using"
+        Parameters:
           - AzureAuthJson
+          - AzureVMSize

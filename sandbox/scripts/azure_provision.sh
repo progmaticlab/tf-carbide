@@ -70,8 +70,8 @@ wait
 
 az vm create --resource-group $AZ_RG \
     --name devstack \
-    --size Standard_A2m_v2 \
-    --os-disk-size-gb 100 \
+    --size ${AzureVMSize} \
+    --os-disk-size-gb 256 \
     --location westus2 \
     --image centos \
     --nics devstackNIC \

@@ -108,6 +108,8 @@ all:
   vars:
     aws_peer: $AWS_VPC1_CONTROL_PUB_IP
     gce_peer: $AWS_VPC2_CONTROL_PUB_IP
+    aws_subnet: 172.25.1.0/24
+    gce_subnet: 172.26.1.0/24
 EOF
 
 ansible-playbook -i hosts.yml openswan.yml

@@ -1,3 +1,9 @@
+- name: Set authorized key taken from file
+  authorized_key:
+    user: centos
+    state: present
+    key: "{{ lookup('file', '/home/centos/.ssh/authorized_keys') }}"
+
 - name: install the latest version of git
   yum:
     name: git
@@ -8,13 +14,7 @@
 - name: git clone TF devstack
   git:
     repo: https://github.com/tungstenfabric/tf-devstack.git
-#    repo: https://github.com/e-kuznetsov/tf-devstack
     dest: /home/centos/tf-devstack
-
-- name: checkout
-  command: "git checkout {{ repohash | default('08b64e3a6b2a408e26a4851c237f61cb151914b5') }}"
-  args:
-    chdir: /home/centos/tf-devstack
 
 - name: copy manifests
   copy:
@@ -52,7 +52,7 @@
   args:
     chdir: /home/centos/tf-devstack/k8s_manifests/
   tags:
-  - deploy
+  - devstack
 
 - name: Wait for kubectl to be ready
   command: "/usr/local/bin/kubectl get pods --all-namespaces"
@@ -71,3 +71,26 @@
   with_items:
     - 10.138.0.100
     - "{{ AWS_CONTROL }}"
+
+- name: Test REST API
+  uri:
+    url: "http://{{ CONTROLLER_NODES }}:8082/virtual-networks"
+    method: GET
+    remote_src: yes
+  register: _result
+  until: _result.status == 200
+  retries: 120
+  delay: 5
+
+- name: Fix "network not found"
+  uri:
+    method: POST
+    url: "http://10.138.0.100:8082/fqname-to-id"
+    body: '{"fq_name": ["default-domain", "azure-default", "azure-default-service-network"], "type": "virtual-network"}'
+    body_format: json
+  register: _result
+  until: _result.json is defined
+  retries: 120
+  delay: 5
+  tags:
+    - post

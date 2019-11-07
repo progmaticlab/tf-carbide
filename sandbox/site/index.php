@@ -10,6 +10,7 @@ $deployment_log = 'debug/logs/deployment.log';
 $deploying_begin_state = 0;
 $completed_state = 1;
 $completed_multicloud =2;
+$completed_multicloud_azure =3;
 $invalid_state = 99;
 
 $keyname = getenv('AWS_USERKEY');
@@ -62,13 +63,11 @@ $completed_multicloud_html = <<<COMPLETED_MC
 <p> Example of connectivity between clouds:</p>
 <p style="padding-left: 15px;">Connect to control node on VPC1 and deploy simple application:<br>
 <code>sudo kubectl apply -f https://tungsten-fabric-sandbox.s3-us-west-2.amazonaws.com/app-loc.yaml</code></p>
-<p style="padding-left: 15px;">Find a Pod's IP and Cluster IP:<br>
-<code>sudo kubectl get pods -o wide</code><br>
+<p style="padding-left: 15px;">Find a Cluster IP:<br>
 <code>sudo kubectl get services</code></p>
 <p style="padding-left: 15px;">Connect to control node on VPC2 and check connectivity:<br>
-<code> sudo kubectl run -i --tty busybox --image=busybox -- sh <code></br>
-<code># wget -O - <i>&lt;service_ip&gt;</i><code><br>
-<code># wget -O - <i>&lt;pod_ip:8080&gt;</i><code></p>
+<code>sudo kubectl run -i --tty busybox --image=busybox -- sh <code></br>
+<code>wget -O - <i>&lt;service_ip&gt;</i><code><br>
 <br>
 
 <table>
@@ -95,6 +94,47 @@ first сonnect to the controller via SSH using the key specified during the depl
 <p style="padding-left: 30px;">Example:</p>
 <p style="padding-left: 40px;"><code>ssh -i $keyname centos@$vpc1_control</code></br>
 <code>sudo kubectl get pods --all-namespaces</code></br>
+Note: Connection string there may be differences for your operating system or ssh client.</br>
+Use the <i>sudo</i> command to perform tasks with administrator privileges.</p>
+COMPLETED_MC;
+
+$completed_multicloud_azure_html = <<<COMPLETED_MC
+<h3>Deployment is completed</h3>
+<img src="multicloud-azure.svg" />
+<br><br>
+<p> Example of connectivity between clouds:</p>
+<p style="padding-left: 15px;">Connect to control node on AWS and deploy simple application:<br>
+<code>kubectl apply -f https://tungsten-fabric-sandbox.s3-us-west-2.amazonaws.com/app-loc.yaml</code></p>
+<p style="padding-left: 15px;">Find a Cluster IP:<br>
+<code>kubectl get services</code></p>
+<p style="padding-left: 15px;">Connect to control node on AZURE and check connectivity:<br>
+<code>kubectl run -i --tty busybox --image=busybox -- sh <code></br>
+<code>wget -O - <i>&lt;service_ip&gt;</i><code><br>
+<br>
+
+<table>
+  <tr>
+    <td>
+      <b>AWS</b>
+      <p>Tungsten Fabric UI: <a href="https://$vpc1_control:8143" target="_blank">https://$vpc1_control:8143</a>&nbsp;&nbsp;&nbsp;&nbsp;</p>
+      <p style="padding-left: 30px;">user name: <i>admin</i></br>user password: <i>contrail123</i></p>
+      <p>control node: $vpc1_control</br>
+      compute1 node: $vpc1_compute1</br>
+      compute2 node: $vpc1_compute2</p>
+    </td>
+    <td valign="top">
+      <b>&nbsp;&nbsp;AZURE</b>
+      <p style="padding-left: 15px;">Tungsten Fabric UI: <a href="https://$vpc2_control:8143" target="_blank">https://$vpc2_control:8143</a></p>
+      <p style="padding-left: 30px;">user name: <i>admin</i></br>user password: <i>contrail123</i></p>
+      <p style="padding-left: 15px;">control node: $vpc2_control</p>
+    </td>
+  </tr>
+</table>
+<p style="max-width: 920px;">In order to use Tungsten Fabric or Kubernetes CLI utils, 
+first сonnect to the controller via SSH using the key specified during the deployment of CloudFormation stack. The SSH username is <b>centos</b></p>
+<p style="padding-left: 30px;">Example:</p>
+<p style="padding-left: 40px;"><code>ssh -i $keyname centos@$vpc1_control</code></br>
+<code>kubectl get pods --all-namespaces</code></br>
 Note: Connection string there may be differences for your operating system or ssh client.</br>
 Use the <i>sudo</i> command to perform tasks with administrator privileges.</p>
 COMPLETED_MC;
@@ -229,6 +269,27 @@ INVALID_STATE;
       }
       echo $delete_block_html;
     }
+    if ($stage == $completed_multicloud_azure) {
+      if ($set_array['firstrun'] == 'true') {
+           $set_array['firstrun'] = 'false';
+           $settings = json_encode($set_array);
+           file_put_contents ( 'settings.json', $settings);
+           $ch = curl_init();
+           $ip = $_SERVER['REMOTE_ADDR'];
+           curl_setopt($ch, CURLOPT_URL, "http://54.70.115.163/news.gif");
+           curl_setopt($ch, CURLOPT_HTTPHEADER, array("X-Forwarded-For: $ip", "User-Agent: Carbide"));
+           curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+           $server_output = curl_exec ($ch);
+           curl_close($ch);
+      }
+      echo $completed_multicloud_azure_html;
+      echo $references_list;
+      if (!empty($wp_pass)) {
+      echo $wp_block_html;
+      }
+      echo $delete_block_html;
+    }
+
     if ($stage == $invalid_state) {
       echo $invalid_state_html;
       $data = array_slice(file ($deployment_log), -20);

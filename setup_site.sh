@@ -11,7 +11,7 @@ ln -s /var/log/cloud-init.log /var/log/sandbox/cloud-init-output.log
 if [ "$DEPLOYMENT_TYPE" == MultiCloud ]; then
     echo "$(date +"%T %Z"): 1/10 The control site is being deployed ... " > $status_log
 elif [ "$DEPLOYMENT_TYPE" == MC_AZURE ]; then
-    echo "$(date +"%T %Z"): 1/99 The control site is being deployed ... " > $status_log
+    echo "$(date +"%T %Z"): 1/8 The control site is being deployed ... " > $status_log
 else
     echo "$(date +"%T %Z"): 1/7 The control site is being deployed ... " > $status_log
 fi

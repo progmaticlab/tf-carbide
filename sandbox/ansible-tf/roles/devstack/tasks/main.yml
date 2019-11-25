@@ -39,7 +39,7 @@
     mode: 0644
 
 - name: install k8s and tf
-  command: "/home/centos/tf-devstack/k8s_manifests/startup.sh"
+  command: "/home/centos/tf-devstack/k8s_manifests/run.sh"
   environment:
     PATH: "/usr/local/bin:{{ lookup('env','PATH') }}"
     HOME: "{{ lookup('env','HOME') }}"

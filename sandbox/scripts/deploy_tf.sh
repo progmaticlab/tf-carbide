@@ -44,19 +44,19 @@ ansible-playbook -i inventory/ playbooks/provision_instances.yml
 
 K8S_MASTER=$(aws ec2 describe-instances \
     --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
-    --filters "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
+              "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
     --query 'Reservations[*].Instances[*].[PublicDnsName, InstanceId, Tags[?Key==`Name`].Value | [0]]' \
     --output text | grep aws_control | awk '{print $1}')
     
 K8S_MASTER_PR_IP=$(aws ec2 describe-instances \
     --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
-    --filters "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
+              "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
     --query 'Reservations[*].Instances[*].[PublicDnsName, InstanceId, PrivateIpAddress, Tags[?Key==`Name`].Value | [0]]' \
     --output text | grep aws_control | awk '{print $3}')
 
 K8S_WORKERS=($(aws ec2 describe-instances \
     --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
-    --filters "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
+              "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
     --query 'Reservations[*].Instances[*].[PublicDnsName, InstanceId, Tags[?Key==`Name`].Value | [0]]' \
     --output text | grep aws_compute | awk '{print $1}'))
 cat ~/.ssh/authorized_keys | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $K8S_MASTER "cat >> ~/.ssh/authorized_keys"
@@ -75,18 +75,21 @@ done
 
 
 echo "$(date +"%T %Z"): 5/7 Configure instances ... " >> $status_log
+
+sed -i '/    - python-pip/a\    - gcc\n    - python-devel' playbooks/roles/instance/tasks/install_software_Linux.yml
+sed -i '/    name: docker-compose/a\    version: "1.24.1"' playbooks/roles/instance/tasks/install_software_Linux.yml
 ansible-playbook -i inventory/ playbooks/configure_instances.yml
 
 K8S_MASTER_NODE_PROFILE=$(echo $AWS_MP | awk -F/ '{print $2}')
 K8S_WORKER_NODE_PROFILE=$(echo $AWS_WP | awk -F/ '{print $2}')
 K8S_MASTER_INSTANCE_ID=$(aws ec2 describe-instances \
     --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
-    --filters "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
+              "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
     --query 'Reservations[*].Instances[*].[InstanceId, Tags[?Key==`Name`].Value | [0]]' \
     --output text | grep aws_control | awk '{print $1}')
 K8S_WORKER_INSTANCES_ID=($(aws ec2 describe-instances \
     --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" \
-    --filters "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
+              "Name=instance.group-name,Values=${AWS_SECURITY_GROUP}" \
     --query 'Reservations[*].Instances[*].[InstanceId, Tags[?Key==`Name`].Value | [0]]' \
     --output text | grep aws_compute | awk '{print $1}'))
 AWS_SECURITY_GROUP_ID=$(aws ec2 describe-security-groups --filters "Name=tag-value,Values=${AWS_STACK_NAME}*" --query 'SecurityGroups[*].GroupId[]' --output text)

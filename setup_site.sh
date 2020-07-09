@@ -29,7 +29,8 @@ echo "SetEnv AWS_USERKEY ${AWS_USERKEY}" >> /var/www/html/sandbox/.htaccess
 htpasswd -bc /etc/httpd/.htpasswd admin "$1"
 service httpd restart
 yum -y install epel-release
-yum -y install python-pip ansible-2.4.2.0-2.el7.noarch git unzip python-urllib3 python-boto pystache python-daemon jq moreutils
+yum -y install python-pip git unzip python-urllib3 python-boto pystache python-daemon jq moreutils python-paramiko python2-cryptography sshpass
+rpm -i https://releases.ansible.com/ansible/rpm/release/epel-7-x86_64/ansible-2.7.11-1.el7.ans.noarch.rpm    
 curl -s "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "/tmp/awscli-bundle.zip"
 unzip /tmp/awscli-bundle.zip -d/tmp
 /tmp/awscli-bundle/install -i /usr/local/aws -b /usr/bin/aws

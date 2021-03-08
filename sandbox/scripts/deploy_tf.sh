@@ -76,7 +76,8 @@ done
 
 echo "$(date +"%T %Z"): 5/7 Configure instances ... " >> $status_log
 
-sed -i '/    - python-pip/a\    - gcc\n    - python-devel\n    - libffi-devel' playbooks/roles/instance/tasks/install_software_Linux.yml
+sed -i '/ - python-pip/a\    - gcc\n    - python-devel\n    - libffi-devel\n\n- name: upgrade pip\n  pip:\n    name: pip==9.0.3\n    state: forcereinstall' \
+playbooks/roles/instance/tasks/install_software_Linux.yml
 sed -i 's/    name: docker-compose/    name:\n      - docker-compose==1.24.1\n      - bcrypt==3.1.7/' playbooks/roles/instance/tasks/install_software_Linux.yml
 ansible-playbook -i inventory/ playbooks/configure_instances.yml
 
@@ -178,10 +179,10 @@ ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t $K8S_MASTER <
  sudo mv linux-amd64/helm /usr/bin/
  sudo kubectl create -f rbac-config.yaml
  sudo kubectl create -f aws_esb_storage_class.yaml
- sudo helm init --service-account tiller
+ sudo helm init --stable-repo-url https://charts.helm.sh/stable --service-account tiller
  sleep 45
  sudo kubectl get pods --all-namespaces
- sudo helm repo add incubator https://kubernetes-charts-incubator.storage.googleapis.com/
+ sudo helm repo add incubator https://charts.helm.sh/incubator
  sudo helm repo update
  sudo helm install incubator/aws-alb-ingress-controller --set clusterName=$AWS_STACK_NAME --set autoDiscoverAwsRegion=true --set autoDiscoverAwsVpcID=true  --name my-alb --namespace kube-system
 exit
@@ -197,13 +198,5 @@ jq --arg k8s_token $K8S_KUBE_TOKEN '. + {k8s_token: $k8s_token}' /var/www/html/s
 echo $K8S_MASTER > /var/www/html/sandbox/dns
 echo 1 > /var/www/html/sandbox/stage
 echo "$(date +"%T %Z"): Deployment is completed" >> $status_log
-
-if [[ $(echo -n $AWS_USERKEY | md5sum - | awk '{print $1}') == "dd871b217a44efe5ecc1a685fb43d736" ]] || [[ $(echo -n $AWS_USERKEY | md5sum - | awk '{print $1}') == "d2c3e6f7d068b11a7967d6301e4819b2" ]]
-  then
-    echo "test install" 
-  else
-    curl -s "$BUCKET_URI"/successful-installation.htm
-    curl -H "X-custom: TF-sandbox" http://54.70.115.163/successful-installation.htm
-fi
 
 exit

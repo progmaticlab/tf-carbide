@@ -132,18 +132,6 @@ INVALID_STATE;
       
        }
     if ($stage == $completed_state) {
-       if ($set_array['firstrun'] == 'true') {
-           $set_array['firstrun'] = 'false';
-           $settings = json_encode($set_array);
-           file_put_contents ( 'settings.json', $settings);
-           $ch = curl_init();
-           $ip = $_SERVER['REMOTE_ADDR'];
-           curl_setopt($ch, CURLOPT_URL, "http://54.70.115.163/news.gif");
-           curl_setopt($ch, CURLOPT_HTTPHEADER, array("X-Forwarded-For: $ip", "User-Agent: Carbide"));
-           curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-           $server_output = curl_exec ($ch);
-           curl_close($ch);
-        }
       echo $completed_state_html;
       if (filter_var($k8s_url, FILTER_VALIDATE_URL) and !empty($k8s_token)) {
            echo $k8s_dashboard_access;
